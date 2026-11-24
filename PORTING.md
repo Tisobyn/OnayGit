@@ -47,4 +47,20 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 29. Quick repository switcher and shortcuts
 - [x] 30. Move commits in history (newer / older)
 - [x] 31. Spaces (groups of repositories)
-- [ ] Not done: expand context lines in the diff, per-space keybind settings
+- [x] 32. Expand context lines in the diff (key `e`)
+
+## Round 3 (match 1git screens)
+- [x] 33. Switcher, light theme, appearance preview
+- [x] 34. Rail menus (accounts, spaces, workspace settings)
+- [x] 35. Spaces with icons and colours, separate tabs per space
+- [x] 36. Editable keybinds (all 1git commands wired)
+- [x] 37. Accounts: browser sign-in (device flow), GitHub CLI auto-add
+- [x] 38. Git identity panel, external editor rules
+- [x] 39. AI connection side panel (OpenCode, Claude Code, ChatGPT, Custom, API; plan, model, effort)
+- [x] 40. Syntax highlighting in diffs
+- [x] 41. Full-page Clone with account repositories
+- [x] 42. Ignored changes view with local snapshots, rail sync button
+- [x] 43. Guided tour
+
+Not checked end to end: browser sign-in against a real provider, recording a shortcut by hand,
+rail menu actions. Light theme was checked on the main screens only.

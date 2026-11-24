@@ -13,6 +13,7 @@ src/
   main.rs            window setup and icon
   prelude.rs         common imports used by every module
   settings.rs        saved settings and repository list (files in ~/)
+  keybinds.rs        shortcut list, saved overrides, key capture
   app/
     mod.rs           App state, enums and the update loop
     repos.rs         open/add/remove repos, refresh, stage, background jobs
@@ -26,6 +27,8 @@ src/
     hosting.rs       publish repository, pull requests
     ai.rs            AI commit messages
     machines.rs      SSH machines
+    editors.rs       external editors and per-file-type rules
+    ignored.rs       ignored files and their local snapshots
   git/               thin wrappers over the git command (no UI code)
     exec.rs          run git, with or without stdin
     status.rs        status, stage, unstage, discard, file diff
@@ -68,7 +71,10 @@ src/
     icons.rs         Phosphor icons from 1git (assets/icons)
     tabs.rs          tab bar and Cmd+T / Cmd+W
     settings_repo.rs Remotes and repository appearance pages
-    tips.rs          welcome window and guided tips
+    tips.rs          welcome window and tip boxes
+    tour.rs          guided tour (three tips next to real controls)
+    clone.rs         full-page Clone (account repositories or URL)
+    syntax.rs        small syntax highlighter for diffs
     shell.rs         window frame: title bar tabs, left rail, rounded card
     switcher.rs      Cmd+P repository switcher
     accounts_page.rs Accounts and AI settings pages
