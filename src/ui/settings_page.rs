@@ -1191,6 +1191,8 @@ impl App {
                             if ui.button(button).clicked() {
                                 if title == "Guided tips" {
                                     self.settings.tips = true;
+                                    self.settings.tour = 0;
+                                    self.settings.tour_skipped = false;
                                 } else {
                                     self.settings.onboarded = false;
                                 }

@@ -26,6 +26,9 @@ pub struct Settings {
     pub editor: String,
     pub ai: AiConfig,
     pub ai_added: bool,
+    /// Guided tour steps already done (bit per step).
+    pub tour: u8,
+    pub tour_skipped: bool,
 }
 
 impl Default for Settings {
@@ -51,6 +54,8 @@ impl Default for Settings {
             editor: "open".into(),
             ai: AiConfig::default(),
             ai_added: false,
+            tour: 0,
+            tour_skipped: false,
         }
     }
 }
@@ -95,6 +100,8 @@ impl Settings {
                 "ai_provider" => s.ai.provider = AiProvider::from_key(v).unwrap_or(AiProvider::ClaudeCode),
                 "ai_command" => s.ai.command = v.to_string(),
                 "ai_model" => s.ai.model = v.to_string(),
+                "tour" => s.tour = v.parse().unwrap_or(0),
+                "tour_skipped" => s.tour_skipped = v == "true",
                 "ai_added" => s.ai_added = v == "true",
                 "ai_name" => s.ai.name = v.to_string(),
                 "ai_instructions" => s.ai.instructions = v.replace("\\n", "\n"),
@@ -107,7 +114,7 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\ntour={}\ntour_skipped={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
@@ -125,7 +132,9 @@ impl Settings {
             self.ai_added,
             self.ai.name.replace('\n', " "),
             self.ai.instructions.replace('\n', "\\n"),
-            self.ui_font, self.code_font, self.grain, self.grain_pattern, self.grain_strength, self.commit_badges
+            self.ui_font, self.code_font, self.grain, self.grain_pattern, self.grain_strength, self.commit_badges,
+            self.tour,
+            self.tour_skipped,
         );
         let _ = std::fs::write(settings_path(), text);
     }

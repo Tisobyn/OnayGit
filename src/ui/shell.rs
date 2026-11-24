@@ -245,6 +245,7 @@ impl App {
                         None => ("layers".to_string(), p.muted),
                     };
                     let r = icon_button_tint(ui, &sicon, "Spaces", false, p, scol);
+                    self.tour_rects[2] = Some(r.rect);
                     if r.clicked() {
                         menu = Some((1, r.rect));
                     }

@@ -3,6 +3,7 @@ use crate::prelude::*;
 
 impl App {
     pub fn toolbar(&mut self, ctx: &egui::Context) {
+        self.tour_rects[1] = None;
         let p = self.pal();
         let mut goto_home = false;
         let mut open_dialog: Option<Dialog> = None;
@@ -70,7 +71,7 @@ impl App {
 
                     // Branch block
                     icon(ui, "branch", 18.0, p.muted);
-                    ui.menu_button(two_line("Current Branch", &self.branch, &p), |ui| {
+                    let branch_btn = ui.menu_button(two_line("Current Branch", &self.branch, &p), |ui| {
                         ui.set_min_width(240.0);
                         ui.add(
                             egui::TextEdit::singleline(&mut self.branch_filter)
@@ -120,7 +121,8 @@ impl App {
                             });
                         });
                         ui.separator();
-                        ui.label("New branch");
+                        let r = ui.label("New branch");
+                        self.tour_rects[1] = Some(r.rect);
                         ui.text_edit_singleline(&mut self.new_branch);
                         let ok = !self.new_branch.trim().is_empty();
                         if ui.add_enabled(ok, egui::Button::new("Create branch")).clicked() {
@@ -128,6 +130,7 @@ impl App {
                             ui.close_menu();
                         }
                     });
+                    self.tour_rects[0] = Some(branch_btn.response.rect);
                     ui.separator();
 
                     // Sync block (Fetch / Pull / Push / Publish like GitHub Desktop)
@@ -239,6 +242,7 @@ impl App {
             self.confirm = ask;
         }
         if create_branch {
+            self.tour_done(1);
             if let Some(repo) = self.repo() {
                 let name = self.new_branch.trim().replace(' ', "-");
                 let r = git::create_branch(&repo, &name);

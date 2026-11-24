@@ -128,6 +128,9 @@ pub struct App {
     pub diff: Vec<DiffLine>,
     pub summary: String,
     pub filter_open: bool,
+    /// Where the guided tour points: branch button, new-branch item, space button.
+    pub tour_rects: [Option<egui::Rect>; 3],
+    pub tour_space: Option<usize>,
     pub focus_filter: bool,
     pub commit_now: bool,
     /// Author, date and message body of the selected commit.
@@ -312,6 +315,8 @@ impl App {
             diff: vec![],
             summary: String::new(),
             filter_open: false,
+            tour_rects: [None; 3],
+            tour_space: None,
             focus_filter: false,
             commit_now: false,
             commit_info: None,
@@ -669,6 +674,7 @@ impl eframe::App for App {
             }
         }
 
+        self.tour_layer(ctx);
         self.paint_corners(ctx);
         self.paint_grain(ctx);
 

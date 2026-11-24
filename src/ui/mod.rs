@@ -21,5 +21,6 @@ pub mod switcher;
 pub mod syntax;
 pub mod theme;
 pub mod tips;
+pub mod tour;
 pub mod toolbar;
 pub mod widgets;
