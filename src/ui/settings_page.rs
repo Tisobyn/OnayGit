@@ -64,6 +64,13 @@ impl App {
                 .show(ctx, |ui| self.account_add_panel(ctx, ui, &p));
         }
         self.space_dialog_ui(ctx);
+        if self.section == Section::Appearance {
+            egui::SidePanel::right("appearance_preview")
+                .exact_width(330.0)
+                .resizable(false)
+                .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
+                .show(ctx, |ui| appearance_preview(ui, &p));
+        }
 
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 24.0, right: 32.0, top: 20.0, bottom: 20.0 }))
@@ -809,4 +816,50 @@ fn theme_tile(ui: &mut egui::Ui, p: &Pal, c: &Pal, label: &str, selected: bool, 
         pt.rect_stroke(rect.shrink(1.0), 8.0, egui::Stroke::new(1.0_f32, accent()));
     }
     resp
+}
+
+/// Live sample of workspace, history and diff, so theme changes are visible at once.
+fn appearance_preview(ui: &mut egui::Ui, p: &Pal) {
+    ui.label(RichText::new("Preview").size(14.0).color(p.text));
+    ui.add_space(12.0);
+    egui::Frame::none().stroke(egui::Stroke::new(1.0_f32, p.border)).rounding(6.0).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        egui::Frame::none().fill(p.hover).inner_margin(egui::Margin::same(12.0)).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.label(RichText::new("Workspace").size(13.5).color(p.text));
+            ui.label(RichText::new("Sample commits and code").size(12.0).color(p.muted));
+        });
+        egui::Frame::none().inner_margin(egui::Margin::same(12.0)).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.label(RichText::new("History").size(13.5).color(p.text));
+            ui.add_space(4.0);
+            for (tag, msg) in [("feat", "(core) add workspace shortcuts"), ("refactor", "(db) simplify queries"), ("", "Update the getting started guide")] {
+                ui.horizontal(|ui| {
+                    if !tag.is_empty() {
+                        ui.label(RichText::new(tag).size(11.0).color(p.muted).background_color(p.hover));
+                    }
+                    ui.label(RichText::new(msg).size(12.5).color(p.text));
+                });
+            }
+        });
+        ui.separator();
+        let mono = |t: &str, c: Color32| RichText::new(t).monospace().size(11.0).color(c);
+        egui::Frame::none().inner_margin(egui::Margin::symmetric(12.0, 8.0)).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.label(mono("src/greeting.ts", p.muted));
+            ui.add_space(6.0);
+            ui.label(mono(" export function greet(name: string) {", p.text));
+        });
+        for (bg, line) in [(p.del_bg, "- return \"Hello\";"), (p.add_bg, "+ return `Hello, ${name}!`;")] {
+            egui::Frame::none().fill(bg).inner_margin(egui::Margin::symmetric(12.0, 4.0)).show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.label(mono(line, p.text));
+            });
+        }
+        egui::Frame::none().inner_margin(egui::Margin::symmetric(12.0, 6.0)).show(ui, |ui| {
+            ui.label(mono("  }", p.text));
+        });
+    });
+    ui.add_space(8.0);
+    ui.label(RichText::new("Updates as you adjust your appearance settings.").size(12.0).color(p.muted));
 }
