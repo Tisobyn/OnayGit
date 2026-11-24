@@ -40,14 +40,14 @@ impl App {
                 ui.add_space(20.0);
                 rail_label(ui, "SPACES", &p);
                 if rail_item(ui, "layers", "All repositories", self.selected_space.is_none() && self.selected_machine.is_none(), &p).clicked() {
-                    self.selected_space = None;
+                    self.set_space(None);
                     self.selected_machine = None;
                 }
                 for i in 0..self.spaces.len() {
                     let name = self.spaces[i].name.clone();
                     let r = rail_item(ui, "folder", &name, self.selected_space == Some(i) && self.selected_machine.is_none(), &p);
                     if r.clicked() {
-                        self.selected_space = Some(i);
+                        self.set_space(Some(i));
                         self.selected_machine = None;
                     }
                     r.context_menu(|ui| {

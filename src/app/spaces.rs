@@ -82,7 +82,7 @@ impl App {
         }
         self.spaces.push(Space { name, icon: self.space_icon.clone(), color: self.space_color, repos: vec![] });
         self.space_name.clear();
-        self.selected_space = Some(self.spaces.len() - 1);
+        self.set_space(Some(self.spaces.len() - 1));
         self.save_spaces();
     }
 
@@ -112,8 +112,9 @@ impl App {
 
     pub fn remove_space(&mut self, i: usize) {
         if i < self.spaces.len() {
-            self.spaces.remove(i);
-            self.selected_space = None;
+            self.set_space(None);
+            let name = self.spaces.remove(i).name;
+            self.space_tabs.remove(&name);
             self.save_spaces();
         }
     }

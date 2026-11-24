@@ -250,7 +250,7 @@ impl App {
             self.space_dialog = Some(Some(i));
         }
         if let Some(i) = switch {
-            self.selected_space = Some(i);
+            self.set_space(Some(i));
         }
     }
 

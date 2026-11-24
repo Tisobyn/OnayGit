@@ -175,6 +175,10 @@ pub struct App {
     pub remote_edit: Option<(String, String)>,
     pub remote_rename: Option<(String, String)>,
     pub tabs: Vec<PathBuf>,
+    /// Space whose tabs are in `tabs` ("" for all repositories).
+    pub tabs_space: String,
+    /// Tabs of the other spaces.
+    pub space_tabs: std::collections::HashMap<String, Vec<PathBuf>>,
     pub repo_styles: HashMap<PathBuf, RepoStyle>,
     pub tip: usize,
     pub tasks: HashSet<String>,
@@ -352,6 +356,8 @@ impl App {
             remote_edit: None,
             remote_rename: None,
             tabs: vec![],
+            tabs_space: String::new(),
+            space_tabs: Default::default(),
             repo_styles: tabs::load_styles(),
             tip: 0,
             tasks: HashSet::new(),
@@ -432,7 +438,8 @@ impl App {
             rx,
             last_refresh: Instant::now(),
         };
-        app.tabs = tabs::load_tabs().into_iter().filter(|t| app.repos.contains(t)).collect();
+        app.space_tabs = tabs::load_tabs();
+        app.tabs = app.space_tabs.remove("").unwrap_or_default().into_iter().filter(|t| app.repos.contains(t)).collect();
         if app.tabs.is_empty() {
             if let Some(first) = app.repos.first() {
                 app.tabs.push(first.clone());

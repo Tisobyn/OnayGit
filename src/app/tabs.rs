@@ -23,14 +23,17 @@ fn styles_path() -> PathBuf {
     home_dir().join(".onaygit_styles")
 }
 
-pub fn load_tabs() -> Vec<PathBuf> {
-    std::fs::read_to_string(tabs_path())
-        .unwrap_or_default()
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(PathBuf::from)
-        .filter(|p| p.exists() || git::is_remote(p))
-        .collect()
+/// Open tabs per space. Lines are `space<TAB>path`; a line with no tab belongs to all repositories.
+pub fn load_tabs() -> HashMap<String, Vec<PathBuf>> {
+    let mut map: HashMap<String, Vec<PathBuf>> = HashMap::new();
+    for l in std::fs::read_to_string(tabs_path()).unwrap_or_default().lines().filter(|l| !l.trim().is_empty()) {
+        let (space, path) = l.split_once('\t').unwrap_or(("", l));
+        let path = PathBuf::from(path);
+        if path.exists() || git::is_remote(&path) {
+            map.entry(space.to_string()).or_default().push(path);
+        }
+    }
+    map
 }
 
 pub fn load_styles() -> HashMap<PathBuf, RepoStyle> {
@@ -49,7 +52,10 @@ pub fn load_styles() -> HashMap<PathBuf, RepoStyle> {
 
 impl App {
     fn save_tabs(&self) {
-        let text: Vec<String> = self.tabs.iter().map(|p| p.display().to_string()).collect();
+        let mut text: Vec<String> = self.tabs.iter().map(|p| format!("{}\t{}", self.tabs_space, p.display())).collect();
+        for (space, list) in &self.space_tabs {
+            text.extend(list.iter().map(|p| format!("{space}\t{}", p.display())));
+        }
         let _ = std::fs::write(tabs_path(), text.join("\n"));
     }
 
@@ -60,6 +66,23 @@ impl App {
             .map(|(p, s)| format!("{}\t{}\t{}", p.display(), s.color, s.icon))
             .collect();
         let _ = std::fs::write(styles_path(), text.join("\n"));
+    }
+
+    /// Show another space. Each space keeps its own tabs.
+    pub fn set_space(&mut self, space: Option<usize>) {
+        let key = space.and_then(|i| self.spaces.get(i)).map(|s| s.name.clone()).unwrap_or_default();
+        if key != self.tabs_space {
+            let old = std::mem::take(&mut self.tabs);
+            self.space_tabs.insert(std::mem::replace(&mut self.tabs_space, key.clone()), old);
+            self.tabs = self.space_tabs.remove(&key).unwrap_or_default();
+            self.save_tabs();
+            let cur = self.repo();
+            if cur.as_ref().is_none_or(|r| !self.tabs.contains(r)) {
+                self.current = None;
+                self.screen = Screen::Home;
+            }
+        }
+        self.selected_space = space;
     }
 
     /// Make sure the open repository has a tab.

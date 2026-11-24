@@ -474,7 +474,7 @@ impl App {
             }
             (0, _) => self.open_settings(),
             (1, "All repositories") => {
-                self.selected_space = None;
+                self.set_space(None);
                 self.screen = Screen::Home;
             }
             (1, "New space...") => {
@@ -487,7 +487,7 @@ impl App {
             (1, "Manage spaces...") => open(self, Section::Spaces),
             (1, _) => {
                 if let Some(k) = self.spaces.iter().position(|s| s.name == label) {
-                    self.selected_space = Some(k);
+                    self.set_space(Some(k));
                     self.screen = Screen::Home;
                 }
             }

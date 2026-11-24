@@ -67,7 +67,7 @@ impl App {
                 to = Some((cur + 1) % (m + 1));
             }
             if let Some(t) = to {
-                self.selected_space = t.checked_sub(1);
+                self.set_space(t.checked_sub(1));
                 self.screen = Screen::Home;
             }
         }
