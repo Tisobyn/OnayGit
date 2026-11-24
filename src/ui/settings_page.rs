@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 use crate::app::{CODE_FONTS, UI_FONTS};
 use crate::app::spaces::{space_icon_name, SPACE_COLORS, SPACE_ICONS};
@@ -968,7 +967,7 @@ impl App {
         ui.add_space(8.0);
         let footer_h = 58.0;
         let busy = self.task_running(T_SIGN_IN) || self.task_running(T_DEVICE);
-        egui::ScrollArea::vertical().auto_shrink([false, false]).max_height(ui.available_height() - footer_h).show(ui, |ui| {
+        egui::ScrollArea::vertical().auto_shrink([false, false]).max_height((ui.available_height() - footer_h).max(60.0)).show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 6.0;
             let tile_w = (ui.available_width() - 10.0) / 2.0;
             ui.label(RichText::new("Provider").size(13.0).color(p.text));
@@ -1037,7 +1036,7 @@ impl App {
                             });
                         });
                         copy_field(ui, p, "Application name", "OnayGit");
-                        copy_field(ui, p, "Homepage URL", "https://github.com/Tisobyn/OnayGit");
+                        copy_field(ui, p, "Homepage URL", env!("CARGO_PKG_REPOSITORY"));
                         copy_field(ui, p, "Callback URL", "http://127.0.0.1:8765/oauth/callback");
                         ui.label(RichText::new(if gh { "Enable Device Flow, then register the application." } else { "Enable the device flow scope, then save the application." }).size(12.0).color(p.muted));
                         ui.add_space(6.0);
@@ -1176,9 +1175,9 @@ impl App {
         });
         settings_group(ui, p, "Links", "", |_| {}, |ui| {
             for (title, button, link) in [
-                ("Source code", "Open GitHub", "https://github.com/Tisobyn/OnayGit"),
-                ("Report a problem", "Create an issue", "https://github.com/Tisobyn/OnayGit/issues/new"),
-                ("Releases", "Open releases", "https://github.com/Tisobyn/OnayGit/releases"),
+                ("Source code", "Open GitHub", env!("CARGO_PKG_REPOSITORY")),
+                ("Report a problem", "Create an issue", concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new")),
+                ("Releases", "Open releases", concat!(env!("CARGO_PKG_REPOSITORY"), "/releases")),
             ] {
                 group_row(ui, p, |ui| {
                     ui.horizontal(|ui| {
@@ -1262,9 +1261,9 @@ impl App {
         });
         settings_group(ui, p, "Support", "", |_| {}, |ui| {
             for (title, desc, button, link) in [
-                ("Create an issue", "Report a bug or request a feature on GitHub.", "Create an issue", "https://github.com/Tisobyn/OnayGit/issues/new"),
-                ("Existing issues", "Check reported problems and planned improvements.", "Browse issues", "https://github.com/Tisobyn/OnayGit/issues"),
-                ("Project on GitHub", "Read about OnayGit, explore the source, or contribute.", "Open GitHub", "https://github.com/Tisobyn/OnayGit"),
+                ("Create an issue", "Report a bug or request a feature on GitHub.", "Create an issue", concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new")),
+                ("Existing issues", "Check reported problems and planned improvements.", "Browse issues", concat!(env!("CARGO_PKG_REPOSITORY"), "/issues")),
+                ("Project on GitHub", "Read about OnayGit, explore the source, or contribute.", "Open GitHub", env!("CARGO_PKG_REPOSITORY")),
             ] {
                 group_row(ui, p, |ui| {
                     ui.horizontal(|ui| {

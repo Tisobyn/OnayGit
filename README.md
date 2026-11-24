@@ -6,6 +6,7 @@
 
 **A fast, calm Git client for the Mac. Rust, egui and the plain `git` command.**
 
+[![Repo](https://img.shields.io/badge/GitHub-Tisobyn%2FOnayGit-181717?logo=github)](https://github.com/Tisobyn/OnayGit)
 ![Rust](https://img.shields.io/badge/Rust-2021-orange?logo=rust&logoColor=white)
 ![egui](https://img.shields.io/badge/UI-egui%200.29-5b8def)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple&logoColor=white)
@@ -38,6 +39,9 @@
     <td width="50%"><img src="docs/screenshots/repos.png" alt="Repository menu"><br><sub><b>Repositories.</b> Filter, jump between repos, add new ones.</sub></td>
   </tr>
   <tr>
+    <td colspan="2"><img src="docs/screenshots/graph.png" alt="Graph"><br><sub><b>Graph.</b> Every branch and tag on the left, the whole commit graph on the right. Click a commit to open it in History.</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/screenshots/ignored.png" alt="Ignored changes"><br><sub><b>Ignored changes.</b> Local history for files git ignores, like <code>.env</code>.</sub></td>
     <td width="50%"><img src="docs/screenshots/settingsabout.png" alt="About"><br><sub><b>Settings.</b> Themes, accounts, AI, editors, shortcuts and more.</sub></td>
   </tr>
@@ -49,6 +53,7 @@
 |---|---|
 | **Changes** | File list or tree, line and hunk staging, commit, amend, undo last commit, discard, ignore |
 | **History** | Commit graph, changed files column, pictures and co-authors, tag, cherry-pick, revert, reset, reword, squash |
+| **Side rail** | One sync button (fetch, pull, push, publish) with ahead/behind badge, pull requests, Changes, History, Stashes, Graph |
 | **Branches** | Switch, create, merge, delete, compare, worktrees, stash |
 | **Remotes** | Fetch, pull, push, publish to GitHub or GitLab, pull requests |
 | **Organise** | Tabs, spaces with icons and colours, quick switcher, SSH machines |
@@ -180,4 +185,4 @@ Rule of thumb: git commands live in `git/`, drawing lives in `ui/`, state lives 
 
 ---
 
-<div align="center"><sub>Made by Tisobyn. Inspired by GitHub Desktop and 1git.</sub></div>
+<div align="center"><sub><a href="https://github.com/Tisobyn/OnayGit">github.com/Tisobyn/OnayGit</a> · <a href="https://github.com/Tisobyn/OnayGit/issues">Issues</a><br>Made by Tisobyn. Inspired by GitHub Desktop and 1git.</sub></div>

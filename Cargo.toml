@@ -5,6 +5,9 @@ edition = "2021"
 description = "A simple GitHub Desktop style Git client in Rust"
 authors = ["Tisobyn"]
 repository = "https://github.com/Tisobyn/OnayGit"
+keywords = ["git", "gui", "egui"]
+categories = ["development-tools"]
+readme = "README.md"
 build = "build.rs"
 
 [[bin]]
@@ -22,5 +25,4 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 opt-level = "s"
 lto = "fat"
 codegen-units = 1
-panic = "abort"
 strip = "symbols"
