@@ -110,6 +110,8 @@ pub struct App {
     pub diff: Vec<DiffLine>,
     pub summary: String,
     pub filter_open: bool,
+    /// Author, date and message body of the selected commit.
+    pub commit_info: Option<(String, String, String)>,
     pub branch: String,
     pub branches: Vec<String>,
     pub new_branch: String,
@@ -245,6 +247,7 @@ impl App {
             diff: vec![],
             summary: String::new(),
             filter_open: false,
+            commit_info: None,
             branch: String::new(),
             branches: vec![],
             new_branch: String::new(),
@@ -387,6 +390,16 @@ impl App {
             Ok("repo") => {
                 if let Some(r) = app.repos.first().cloned() {
                     app.open_repo(r);
+                }
+            }
+            Ok("history") => {
+                if let Some(r) = app.repos.first().cloned() {
+                    app.open_repo(r);
+                    app.tab = Tab::History;
+                    app.refresh();
+                    if let Some(h) = app.commits.first().map(|c| c.hash.clone()) {
+                        app.select_commit(h);
+                    }
                 }
             }
             _ => {}

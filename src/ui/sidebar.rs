@@ -41,9 +41,16 @@ impl App {
                         Tab::History => "History",
                     };
                     ui.label(RichText::new(title).size(14.0).color(p.text));
+                    if self.tab == Tab::History {
+                        let n = if self.compare.is_some() { self.compare_commits.len() } else { self.commits.len() };
+                        ui.label(RichText::new(format!("({n})")).size(12.5).color(p.muted));
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.add_space(8.0);
-                        for (name, tip) in [("search", "Filter files"), ("sync", "Refresh"), ("list", "Group by folder")] {
+                        for (name, tip) in [("search", "Filter"), ("sync", "Refresh"), ("list", "Group by folder")] {
+                            if name == "list" && self.tab == Tab::History {
+                                continue;
+                            }
                             let (rect, resp) = ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
                             let on = (name == "list" && self.tree_view && self.tab == Tab::Changes) || (name == "search" && self.filter_open);
                             if on || resp.hovered() {

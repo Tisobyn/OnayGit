@@ -35,6 +35,30 @@ impl App {
                 ui.separator();
             }
 
+            if !changes {
+                if let Some(h) = self.selected_commit.as_deref() {
+                    let subject = self.commits.iter().chain(self.compare_commits.iter()).find(|c| c.hash == h).map(|c| c.subject.clone()).unwrap_or_default();
+                    let short: String = h.chars().take(7).collect();
+                    egui::Frame::none().inner_margin(egui::Margin::symmetric(18.0, 12.0)).show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        ui.spacing_mut().item_spacing.y = 4.0;
+                        ui.label(RichText::new(subject).size(14.5).color(p.text));
+                        if let Some((author, date, body)) = &self.commit_info {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(author).size(12.5).color(p.text));
+                                ui.label(RichText::new(format!("\u{b7} {date}")).size(12.5).color(p.muted));
+                                ui.label(RichText::new(short).size(12.5).monospace().color(p.muted));
+                            });
+                            if !body.is_empty() {
+                                ui.add_space(4.0);
+                                ui.label(RichText::new(body).size(12.5).color(p.muted));
+                            }
+                        }
+                    });
+                    ui.separator();
+                }
+            }
+
             if changes && !stash_view {
                 let file = self
                     .selected_file

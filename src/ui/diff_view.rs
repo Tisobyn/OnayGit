@@ -118,14 +118,28 @@ pub fn draw_diff(
                         );
                     }
                     Kind::File => {
-                        painter.rect_filled(rect, 0.0, p.hover);
-                        painter.text(
-                            egui::pos2(rect.min.x + 10.0, cy),
-                            Align2::LEFT_CENTER,
-                            &l.text,
-                            FontId::proportional(size + 1.0),
-                            p.text,
-                        );
+                        let (mut adds, mut dels) = (0, 0);
+                        for n in &lines[idx + 1..] {
+                            match n.kind {
+                                Kind::File => break,
+                                Kind::Add => adds += 1,
+                                Kind::Del => dels += 1,
+                                _ => {}
+                            }
+                        }
+                        let vis = ui.clip_rect();
+                        let (dir, name) = match l.text.rsplit_once('/') {
+                            Some((d, n)) => (d, n),
+                            None => ("", l.text.as_str()),
+                        };
+                        let g = painter.layout_no_wrap(name.to_string(), FontId::proportional(13.5), p.text);
+                        let nw = g.size().x;
+                        painter.galley(egui::pos2(vis.min.x + 18.0, cy - g.size().y / 2.0), g, p.text);
+                        if !dir.is_empty() {
+                            painter.text(egui::pos2(vis.min.x + 26.0 + nw, cy), Align2::LEFT_CENTER, dir, FontId::proportional(12.0), p.muted);
+                        }
+                        painter.text(egui::pos2(vis.max.x - 16.0, cy), Align2::RIGHT_CENTER, format!("\u{2212}{dels}"), FontId::proportional(12.0), Color32::from_rgb(248, 81, 73));
+                        painter.text(egui::pos2(vis.max.x - 16.0 - 30.0, cy), Align2::RIGHT_CENTER, format!("+{adds}"), FontId::proportional(12.0), Color32::from_rgb(63, 185, 80));
                     }
                     Kind::Meta => {
                         painter.text(

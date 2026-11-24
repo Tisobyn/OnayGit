@@ -6,6 +6,8 @@ fn svg(name: &str) -> Option<&'static [u8]> {
     match name {
         "add" => Some(include_bytes!("../../assets/icons/add.svg")),
         "archive" => Some(include_bytes!("../../assets/icons/archive.svg")),
+        "arrowDown" => Some(include_bytes!("../../assets/icons/arrowDown.svg")),
+        "arrowUp" => Some(include_bytes!("../../assets/icons/arrowUp.svg")),
         "arrowLeft" => Some(include_bytes!("../../assets/icons/arrowLeft.svg")),
         "branch" => Some(include_bytes!("../../assets/icons/branch.svg")),
         "browser" => Some(include_bytes!("../../assets/icons/browser.svg")),

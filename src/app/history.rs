@@ -29,6 +29,17 @@ impl App {
         if let Some(repo) = self.repo() {
             self.commit_files = git::commit_files(&repo, &hash);
             self.commit_diff = git::parse_diff(&git::show(&repo, &hash), true);
+            let skip = self.commit_diff.iter().position(|l| matches!(l.kind, Kind::File | Kind::Hunk)).unwrap_or(0);
+            self.commit_diff.drain(..skip);
+            self.commit_info = git::run(
+                &repo,
+                &["show", "-s", "--date=format:%b %-d, %Y at %-I:%M %p", "--format=%an%x1f%ad%x1f%b", &hash],
+            )
+            .ok()
+            .and_then(|t| {
+                let mut p = t.splitn(3, '\u{1f}');
+                Some((p.next()?.trim().to_string(), p.next()?.trim().to_string(), p.next().unwrap_or("").trim().to_string()))
+            });
         }
         self.selected_commit_file = None;
         self.selected_commit = Some(hash);
@@ -39,7 +50,12 @@ impl App {
         let (Some(repo), Some(hash)) = (self.repo(), self.selected_commit.clone()) else { return };
         self.commit_diff = match &path {
             Some(p) => git::parse_diff(&git::show_file(&repo, &hash, p), false),
-            None => git::parse_diff(&git::show(&repo, &hash), true),
+            None => {
+                let mut d = git::parse_diff(&git::show(&repo, &hash), true);
+                let skip = d.iter().position(|l| matches!(l.kind, Kind::File | Kind::Hunk)).unwrap_or(0);
+                d.drain(..skip);
+                d
+            }
         };
         self.selected_commit_file = path;
     }
