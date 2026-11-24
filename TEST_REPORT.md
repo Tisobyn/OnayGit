@@ -159,3 +159,18 @@ Still not tested: Clone with a real account, pull request create, native file pi
 - History: changed files of the selected commit are in a column on the right.
 - Checked: Nord theme looks right.
 - Not tested: Sand theme, tab reorder, real-account flows, file pickers.
+
+---
+
+# Round 5 checks (real GitHub, Test repository)
+
+Done with `Tisobyn/Test` (filled with commits, a tag and a feature branch):
+- Push through the sync button over SSH. Fetch with Cmd+R shows the behind badge, and Pull works.
+- Pull request created from the app (feature/greeting to main). Bug found and fixed: the open list did not reload after creating.
+- Native pickers: Open from disk, Create repository and Clone folder all work. Clone by URL works. Fix: a folder that already has files gets a sub folder named after the repository.
+- Account from the GitHub CLI is picked up and matches the remote.
+- Per-user launcher install and removal (unit test). A broken symlink now counts as installed.
+- Tab reorder added (drag a tab).
+- Token is now saved in the Keychain through stdin, so it never shows in the process list.
+
+Not possible here: "All users" install needs an administrator password.

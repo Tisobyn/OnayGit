@@ -11,6 +11,7 @@
 ![egui](https://img.shields.io/badge/UI-egui%200.29-5b8def)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple&logoColor=white)
 ![Version](https://img.shields.io/badge/version-0.1.0-3fb950)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 <br>
 
@@ -56,7 +57,7 @@
 | **Side rail** | One sync button (fetch, pull, push, publish) with ahead/behind badge, pull requests, Changes, History, Stashes, Graph |
 | **Branches** | Switch, create, merge, delete, compare, worktrees, stash |
 | **Remotes** | Fetch, pull, push, publish to GitHub or GitLab, pull requests |
-| **Organise** | Tabs, spaces with icons and colours, quick switcher, SSH machines |
+| **Organise** | Tabs (drag to reorder), spaces with icons and colours, quick switcher, SSH machines |
 | **Ignored changes** | Save snapshots of ignored files and see what changed |
 | **AI** | Write a commit message with your own provider or command |
 | **Look** | 5 themes, accent colours, fonts, optional grain |
@@ -70,6 +71,14 @@ git clone https://github.com/Tisobyn/OnayGit.git
 cd OnayGit
 cargo run --release
 ```
+
+### Build the app
+
+```bash
+scripts/package.sh
+```
+
+This makes `dist/OnayGit.app` (about 7 MB) and `dist/OnayGit-<version>-macos.zip` (about 3 MB), signed ad hoc so it runs on your Mac. For other Macs, sign it with your own Developer ID.
 
 The optional [`gh`](https://cli.github.com) tool is used to find profile pictures and for pull requests.
 
@@ -91,6 +100,10 @@ All shortcuts can be changed in Settings > Keybinds.
 History rows show the author and any `Co-authored-by` people with round profile pictures. Pictures come from the GitHub CLI, GitHub noreply emails or Gravatar and are cached in `~/.onaygit_avatars`. You can turn them off in Settings > Appearance.
 
 The people icon in the commit box adds co-authors to the next commit. Choices are saved in `~/.onaygit_coauthors`.
+
+## License
+
+[MIT](LICENSE). Icons are [Phosphor](https://phosphoricons.com) (MIT).
 
 ## Where your data lives
 
