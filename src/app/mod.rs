@@ -71,6 +71,7 @@ pub enum Dialog {
     Tags,
     Worktrees,
     Reword,
+    FileHistory,
     Publish,
     PullRequests,
     Switcher,
@@ -290,6 +291,16 @@ pub struct App {
     pub tx: Sender<Done>,
     pub rx: Receiver<Done>,
     pub last_refresh: Instant,
+    /// HEAD commit at the last full refresh.
+    pub head_seen: String,
+    /// How many commits History and Graph load. Grows by 300 with "Load more".
+    pub log_limit: usize,
+    /// Line count of the long diff the user chose to show in full.
+    pub show_big_diff: usize,
+    pub fh_path: String,
+    pub fh_commits: Vec<Commit>,
+    pub fh_blame: Vec<(String, String, String)>,
+    pub fh_tab: u8,
 }
 
 impl App {
@@ -485,6 +496,13 @@ impl App {
             tx,
             rx,
             last_refresh: Instant::now(),
+            head_seen: String::new(),
+            log_limit: 300,
+            show_big_diff: 0,
+            fh_path: String::new(),
+            fh_commits: vec![],
+            fh_blame: vec![],
+            fh_tab: 0,
         };
         app.space_tabs = tabs::load_tabs();
         app.tabs = app.space_tabs.remove("").unwrap_or_default().into_iter().filter(|t| app.repos.contains(t)).collect();
@@ -671,7 +689,7 @@ impl eframe::App for App {
             every = every.max(Duration::from_secs(20));
         }
         if self.screen == Screen::Repo && self.last_refresh.elapsed() > every && self.busy.is_none() {
-            self.refresh();
+            self.refresh_auto();
         }
         ctx.request_repaint_after(every);
 
@@ -684,6 +702,14 @@ impl eframe::App for App {
         self.coauthor_popup(ctx);
 
         self.tab_shortcuts(ctx);
+        // Drop a folder on the window to open it as a repository.
+        let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().filter_map(|f| f.path.clone()).collect());
+        for d in dropped {
+            match std::fs::canonicalize(&d) {
+                Ok(path) if path.is_dir() && git::is_repo(&path) => self.open_repo(path),
+                _ => self.status_msg = format!("{} is not a Git repository", d.display()),
+            }
+        }
         if self.screen != Screen::Repo {
             self.tb_menu = None;
         }

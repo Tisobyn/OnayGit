@@ -7,7 +7,6 @@ impl App {
     }
 
     /// Add a repo to the list. Returns false if the path is not a repository.
-
     pub fn add_repo(&mut self, path: PathBuf) -> bool {
         if !git::is_repo(&path) {
             self.status_msg = format!("{} is not a git repository", path.display());
@@ -54,6 +53,27 @@ impl App {
         self.refresh();
     }
 
+    /// Timer refresh: only status, branch and the open diff. The full reload (history, graph,
+    /// tags, stashes, worktrees) runs only when HEAD moved or the branch changed.
+    pub fn refresh_auto(&mut self) {
+        let Some(repo) = self.repo() else { return };
+        self.last_refresh = Instant::now();
+        let head = git::run(&repo, &["rev-parse", "HEAD"]).unwrap_or_default().trim().to_string();
+        let branch = git::current_branch(&repo);
+        if head != self.head_seen || branch != self.branch {
+            self.refresh();
+            return;
+        }
+        self.files = git::status(&repo);
+        self.ahead_behind = git::ahead_behind(&repo);
+        self.selected_file = self
+            .selected_file
+            .clone()
+            .filter(|p| self.files.iter().any(|f| &f.path == p))
+            .or_else(|| self.files.first().map(|f| f.path.clone()));
+        self.load_diff(&repo);
+    }
+
     pub fn refresh(&mut self) {
         self.last_refresh = Instant::now();
         self.ensure_tab();
@@ -65,12 +85,13 @@ impl App {
             self.diff.clear();
             return;
         };
+        self.head_seen = git::run(&repo, &["rev-parse", "HEAD"]).unwrap_or_default().trim().to_string();
         self.files = git::status(&repo);
         self.branch = git::current_branch(&repo);
         self.branches = git::branches(&repo);
         self.ahead_behind = git::ahead_behind(&repo);
         self.has_remote = git::has_remote(&repo);
-        self.commits = git::log(&repo);
+        self.commits = git::log_n(&repo, "HEAD", self.log_limit);
         self.last_commit = git::last_commit(&repo);
         self.remote_branches = git::remote_branches(&repo);
 
@@ -163,7 +184,6 @@ impl App {
     }
 
     /// Run a slow command (network) on a thread.
-
     pub fn spawn_in(&mut self, ctx: &egui::Context, dir: PathBuf, label: &str, args: &[&str]) {
         if self.busy.is_some() {
             return;
