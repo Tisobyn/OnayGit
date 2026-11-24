@@ -27,10 +27,10 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 15. Sync and conflict review
 
 ## App shell
-- [ ] 16. Tabs (several repositories in one window)
-- [ ] 17. Remotes settings (list, add, remove, rename)
-- [ ] 18. Repository color and icon, themes
-- [ ] 19. Guided tips and onboarding
+- [x] 16. Tabs (several repositories in one window)
+- [x] 17. Remotes settings (list, add, remove, rename)
+- [x] 18. Repository color and icon, themes
+- [x] 19. Guided tips and onboarding
 
 ## Hosting and AI
 - [ ] 20. GitHub and GitLab accounts

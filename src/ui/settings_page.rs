@@ -26,8 +26,18 @@ impl App {
                     (Section::Appearance, "contrast", "Appearance"),
                     (Section::Git, "branch", "Git"),
                     (Section::Editor, "pencil", "External editor"),
-                    (Section::Ignore, "stop", "Ignored files"),
                     (Section::Help, "help", "Help"),
+                ] {
+                    if rail_item(ui, icon, name, self.section == s, &p).clicked() {
+                        self.section = s;
+                    }
+                }
+                ui.add_space(14.0);
+                rail_label(ui, "REPOSITORY", &p);
+                for (s, icon, name) in [
+                    (Section::Remotes, "network", "Remotes"),
+                    (Section::RepoStyle, "palette", "Appearance"),
+                    (Section::Ignore, "stop", "Ignored files"),
                 ] {
                     if rail_item(ui, icon, name, self.section == s, &p).clicked() {
                         self.section = s;
@@ -50,15 +60,36 @@ impl App {
                                 egui::Slider::new(&mut self.settings.refresh_secs, 1..=30).suffix(" s"),
                             );
                         });
+                        setting_row(ui, "Guided tips", "Show short tips in empty screens.", &p, |ui| {
+                            ui.checkbox(&mut self.settings.tips, "");
+                        });
+                        setting_row(ui, "Welcome", "Show the welcome window again.", &p, |ui| {
+                            if ui.button("Show welcome").clicked() {
+                                self.settings.onboarded = false;
+                            }
+                        });
                         setting_row(ui, "Repositories", "Saved list of repositories.", &p, |ui| {
                             ui.label(RichText::new(format!("{} saved", self.repos.len())).color(p.muted));
                         });
                     }
                     Section::Appearance => {
                         page_title(ui, "Appearance", &p);
-                        setting_row(ui, "Theme", "Dark or light colors.", &p, |ui| {
-                            ui.selectable_value(&mut self.settings.dark, true, "Dark");
-                            ui.selectable_value(&mut self.settings.dark, false, "Light");
+                        setting_row(ui, "Theme", "Colors of the whole app.", &p, |ui| {
+                            for t in Theme::ALL {
+                                ui.selectable_value(&mut self.settings.theme, t, t.label());
+                            }
+                        });
+                        setting_row(ui, "Accent color", "Used for buttons and selection.", &p, |ui| {
+                            for (i, (name, color)) in ACCENTS.iter().enumerate() {
+                                let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), Sense::click());
+                                ui.painter().circle_filled(rect.center(), 9.0, *color);
+                                if self.settings.accent == i {
+                                    paint_icon(ui, "check", rect.shrink(5.0), Color32::WHITE);
+                                }
+                                if resp.on_hover_text(*name).clicked() {
+                                    self.settings.accent = i;
+                                }
+                            }
                         });
                         setting_row(ui, "Diff font size", "Text size in the diff view.", &p, |ui| {
                             ui.add(egui::Slider::new(&mut self.settings.diff_font, 10.0..=18.0));
@@ -133,6 +164,8 @@ impl App {
                             }
                         }
                     }
+                    Section::Remotes => self.remotes_page(ui, &p),
+                    Section::RepoStyle => self.repo_style_page(ui, &p),
                     Section::Help => {
                         page_title(ui, "Help", &p);
                         ui.label(format!("OnayGit {}", env!("CARGO_PKG_VERSION")));

@@ -43,7 +43,7 @@ impl App {
                                 egui::pos2(rect.min.x, rect.max.y - 2.0),
                                 egui::vec2(rect.width(), 2.0),
                             );
-                            ui.painter().rect_filled(line, 0.0, ACCENT);
+                            ui.painter().rect_filled(line, 0.0, accent());
                         }
                         if resp.clicked() {
                             new_tab = t;
@@ -87,7 +87,7 @@ impl App {
                                     format!("Commit {} files to {}", staged_n, self.branch)
                                 };
                                 let btn = egui::Button::new(RichText::new(label).color(Color32::WHITE).strong())
-                                    .fill(ACCENT)
+                                    .fill(accent())
                                     .min_size(egui::vec2(ui.available_width(), 28.0));
                                 if ui.add_enabled(ok, btn).clicked() {
                                     do_commit = true;
@@ -153,7 +153,7 @@ impl App {
                             ui.spacing_mut().item_spacing.y = 0.0;
                             for f in self.files.iter().filter(|f| q.is_empty() || f.path.to_lowercase().contains(&q)) {
                                 let sel = self.selected_file.as_deref() == Some(f.path.as_str());
-                                let fill = if sel { ACCENT } else { Color32::TRANSPARENT };
+                                let fill = if sel { accent() } else { Color32::TRANSPARENT };
                                 egui::Frame::none().fill(fill).inner_margin(egui::Margin::symmetric(6.0, 1.0)).show(
                                     ui,
                                     |ui| {
@@ -238,6 +238,10 @@ impl App {
                                 ui.add_space(30.0);
                                 ui.vertical_centered(|ui| {
                                     ui.label(RichText::new("No local changes").color(p.muted));
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.add_space(8.0);
+                                    ui.vertical(|ui| tip_box(ui, &p, self.settings.tips, &mut self.tip));
                                 });
                             }
                         });

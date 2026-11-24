@@ -3,6 +3,7 @@ use crate::prelude::*;
 
 pub mod history;
 pub mod refs;
+pub mod tabs;
 mod repos;
 mod staging;
 
@@ -25,6 +26,8 @@ pub enum Section {
     Appearance,
     Git,
     Editor,
+    Remotes,
+    RepoStyle,
     Ignore,
     Help,
 }
@@ -118,6 +121,15 @@ pub struct App {
     pub repo_op: Option<git::RepoOp>,
     pub reword_hash: String,
     pub reword_text: String,
+    pub remotes: Vec<git::Remote>,
+    pub remote_name: String,
+    pub new_remote_name: String,
+    pub new_remote_url: String,
+    pub remote_edit: Option<(String, String)>,
+    pub remote_rename: Option<(String, String)>,
+    pub tabs: Vec<PathBuf>,
+    pub repo_styles: HashMap<PathBuf, RepoStyle>,
+    pub tip: usize,
     pub amend: bool,
     pub confirm: Option<Confirm>,
     pub last_commit: Option<(String, String)>,
@@ -135,7 +147,8 @@ impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let settings = Settings::load();
         egui_extras::install_image_loaders(&cc.egui_ctx);
-        apply_visuals(&cc.egui_ctx, settings.dark);
+        set_accent(settings.accent);
+        apply_visuals(&cc.egui_ctx, settings.theme);
         cc.egui_ctx.set_zoom_factor(settings.zoom);
 
         let (tx, rx) = channel();
@@ -196,6 +209,15 @@ impl App {
             repo_op: None,
             reword_hash: String::new(),
             reword_text: String::new(),
+            remotes: vec![],
+            remote_name: "origin".to_string(),
+            new_remote_name: String::new(),
+            new_remote_url: String::new(),
+            remote_edit: None,
+            remote_rename: None,
+            tabs: vec![],
+            repo_styles: tabs::load_styles(),
+            tip: 0,
             amend: false,
             confirm: None,
             last_commit: None,
@@ -207,12 +229,18 @@ impl App {
             rx,
             last_refresh: Instant::now(),
         };
+        app.tabs = tabs::load_tabs().into_iter().filter(|t| app.repos.contains(t)).collect();
+        if app.tabs.is_empty() {
+            if let Some(first) = app.repos.first() {
+                app.tabs.push(first.clone());
+            }
+        }
         app.refresh();
         app
     }
 
     pub fn pal(&self) -> Pal {
-        pal(self.settings.dark)
+        pal(self.settings.theme)
     }
 
     pub fn repo(&self) -> Option<PathBuf> {
@@ -223,7 +251,8 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let before = self.settings.clone();
-        apply_visuals(ctx, self.settings.dark);
+        set_accent(self.settings.accent);
+        apply_visuals(ctx, self.settings.theme);
 
         while let Ok((label, res)) = self.rx.try_recv() {
             self.busy = None;
@@ -252,11 +281,14 @@ impl eframe::App for App {
         }
         ctx.request_repaint_after(every);
 
+        self.onboarding_window(ctx);
         self.confirm_window(ctx);
         self.manage_windows(ctx);
 
+        self.tab_shortcuts(ctx);
         match self.screen {
             Screen::Home => {
+                self.tab_bar(ctx);
                 self.status_bar(ctx);
                 self.home(ctx);
             }
@@ -265,6 +297,7 @@ impl eframe::App for App {
                 self.settings_screen(ctx);
             }
             Screen::Repo => {
+                self.tab_bar(ctx);
                 self.toolbar(ctx);
                 self.status_bar(ctx);
                 self.sidebar(ctx);

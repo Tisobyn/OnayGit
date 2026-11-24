@@ -29,7 +29,7 @@ impl App {
             let mut op: Option<(StashOp, String)> = None;
             for s in &self.stashes {
                 let sel = self.selected_stash.as_deref() == Some(s.name.as_str());
-                let fill = if sel { ACCENT } else { Color32::TRANSPARENT };
+                let fill = if sel { accent() } else { Color32::TRANSPARENT };
                 egui::Frame::none().fill(fill).inner_margin(egui::Margin::symmetric(8.0, 1.0)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.horizontal(|ui| {

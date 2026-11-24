@@ -42,7 +42,10 @@ impl App {
     }
 
     pub fn remove_repo(&mut self, i: usize) {
-        self.repos.remove(i);
+        let removed = self.repos.remove(i);
+        if let Some(t) = self.tabs.iter().position(|t| *t == removed) {
+            self.close_tab(t);
+        }
         self.save_repos();
         self.current = match self.current {
             Some(c) if c == i => None,
@@ -54,6 +57,7 @@ impl App {
 
     pub fn refresh(&mut self) {
         self.last_refresh = Instant::now();
+        self.ensure_tab();
         let Some(repo) = self.repo() else {
             self.files.clear();
             self.commits.clear();
@@ -80,6 +84,8 @@ impl App {
         self.graph = graph;
         self.graph_width = width;
         self.repo_op = git::repo_op(&repo);
+        self.remotes = git::remotes(&repo);
+        self.remote_name = git::primary_remote(&self.remotes);
         self.stashes = git::stashes(&repo);
         self.tags = git::tags(&repo);
         self.worktrees = git::worktrees(&repo);

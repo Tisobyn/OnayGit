@@ -95,3 +95,40 @@ impl App {
         self.refresh();
     }
 }
+
+impl App {
+    pub fn add_remote(&mut self) {
+        let Some(repo) = self.repo() else { return };
+        let (name, url) = (self.new_remote_name.trim().to_string(), self.new_remote_url.trim().to_string());
+        if name.is_empty() || url.is_empty() {
+            return;
+        }
+        let r = git::add_remote(&repo, &name, &url);
+        if self.report(r) {
+            self.new_remote_name.clear();
+            self.new_remote_url.clear();
+        }
+        self.refresh();
+    }
+
+    pub fn remove_remote(&mut self, name: &str) {
+        let Some(repo) = self.repo() else { return };
+        let r = git::remove_remote(&repo, name);
+        self.report(r);
+        self.refresh();
+    }
+
+    pub fn rename_remote(&mut self, old: &str, new: &str) {
+        let Some(repo) = self.repo() else { return };
+        let r = git::rename_remote(&repo, old, new.trim());
+        self.report(r);
+        self.refresh();
+    }
+
+    pub fn set_remote_url(&mut self, name: &str, url: &str) {
+        let Some(repo) = self.repo() else { return };
+        let r = git::set_remote_url(&repo, name, url.trim());
+        self.report(r);
+        self.refresh();
+    }
+}

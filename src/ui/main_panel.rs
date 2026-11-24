@@ -100,6 +100,7 @@ impl App {
                         Tab::History => "Select a commit",
                     };
                     ui.label(RichText::new(msg).size(17.0).color(p.muted));
+                    ui.allocate_ui(egui::vec2(380.0, 0.0), |ui| tip_box(ui, &p, self.settings.tips, &mut self.tip));
                 });
             } else if changes && !stash_view && !conflicted {
                 let label = if self.diff_staged { "Unstage hunk" } else { "Stage hunk" };

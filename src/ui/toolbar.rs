@@ -12,6 +12,8 @@ impl App {
         let mut create_branch = false;
         let mut merge_branch: Option<String> = None;
         let mut ask: Option<Confirm> = None;
+        let remote = self.remote_name.clone();
+        let rstyle = self.repo().map(|r| self.style_of(&r));
         let mut sync: Option<(&str, Vec<&str>)> = None;
 
         egui::TopBottomPanel::top("toolbar")
@@ -31,7 +33,10 @@ impl App {
                     // Repository block
                     let name = self.repo().map(|r| repo_name(&r)).unwrap_or_default();
                     ui.add_space(6.0);
-                    icon(ui, "folder", 18.0, p.muted);
+                    match &rstyle {
+                        Some(st) => icon(ui, &st.icon, 18.0, ACCENTS[st.color % ACCENTS.len()].1),
+                        None => icon(ui, "folder", 18.0, p.muted),
+                    }
                     ui.menu_button(two_line("Current Repository", &name, &p), |ui| {
                         ui.set_min_width(220.0);
                         for (i, r) in self.repos.iter().enumerate() {
@@ -120,27 +125,27 @@ impl App {
                     ui.separator();
 
                     // Sync block (Fetch / Pull / Push / Publish like GitHub Desktop)
-                    let (title, sub, args): (&str, String, Option<(&str, Vec<&str>)>) = if !self.has_remote {
-                        ("No remote", "Add a remote to sync".into(), None)
+                    let (title, sub, args): (String, String, Option<(&str, Vec<&str>)>) = if !self.has_remote {
+                        ("No remote".to_string(), "Add a remote to sync".into(), None)
                     } else {
                         match self.ahead_behind {
                             None => (
-                                "Publish branch",
-                                "Push to origin".into(),
-                                Some(("Publishing", vec!["push", "-u", "origin", "HEAD"])),
+                                "Publish branch".to_string(),
+                                format!("Push to {remote}"),
+                                Some(("Publishing", vec!["push", "-u", remote.as_str(), "HEAD"])),
                             ),
                             Some((_, b)) if b > 0 => (
-                                "Pull origin",
+                                format!("Pull {remote}"),
                                 format!("{b} commits behind"),
                                 Some(("Pulling", vec!["pull", "--no-rebase", "--no-edit"])),
                             ),
                             Some((a, _)) if a > 0 => (
-                                "Push origin",
+                                format!("Push {remote}"),
                                 format!("{a} commits ahead"),
                                 Some(("Pushing", vec!["push"])),
                             ),
                             _ => (
-                                "Fetch origin",
+                                format!("Fetch {remote}"),
                                 ago(self.last_fetched),
                                 Some(("Fetching", vec!["fetch", "--all", "--prune"])),
                             ),
@@ -150,13 +155,16 @@ impl App {
                     let label = if let Some(b) = &self.busy {
                         two_line(&format!("{b}..."), "Please wait", &p)
                     } else {
-                        two_line(title, &sub, &p)
+                        two_line(&title, &sub, &p)
                     };
-                    let sync_icon = match title {
-                        "Publish branch" => "publish",
-                        "Pull origin" => "pull",
-                        "Push origin" => "push",
-                        _ => "sync",
+                    let sync_icon = if title.starts_with("Publish") {
+                        "publish"
+                    } else if title.starts_with("Pull") {
+                        "pull"
+                    } else if title.starts_with("Push") {
+                        "push"
+                    } else {
+                        "sync"
                     };
                     icon(ui, sync_icon, 18.0, p.muted);
                     if ui.add_enabled(enabled, egui::Button::new(label).frame(false)).clicked() {

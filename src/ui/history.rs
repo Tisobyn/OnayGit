@@ -66,7 +66,7 @@ impl App {
                         for (st, path) in &self.commit_files {
                             let sel = self.selected_commit_file.as_deref() == Some(path.as_str());
                             let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 22.0), Sense::click());
-                            let fill = if sel { ACCENT } else if resp.hovered() { p.hover } else { Color32::TRANSPARENT };
+                            let fill = if sel { accent() } else if resp.hovered() { p.hover } else { Color32::TRANSPARENT };
                             ui.painter().rect_filled(rect, 0.0, fill);
                             let fg = if sel { Color32::WHITE } else { p.text };
                             let badge = match st {
@@ -99,7 +99,7 @@ impl App {
             for (i, c) in list.iter().enumerate() {
                 let sel = self.selected_commit.as_deref() == Some(c.hash.as_str());
                 let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 40.0), Sense::click());
-                let fill = if sel { ACCENT } else if resp.hovered() { p.hover } else { Color32::TRANSPARENT };
+                let fill = if sel { accent() } else if resp.hovered() { p.hover } else { Color32::TRANSPARENT };
                 ui.painter().rect_filled(rect, 0.0, fill);
                 if !comparing {
                     if let Some(row) = self.graph.get(i) {

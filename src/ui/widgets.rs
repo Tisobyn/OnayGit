@@ -58,11 +58,13 @@ pub fn rail_item(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &
     resp
 }
 
-pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal) -> egui::Response {
+pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 46.0), Sense::click());
     if resp.hovered() {
         ui.painter().rect_filled(rect, 6.0, p.hover);
     }
+    let ic = egui::Rect::from_center_size(rect.min + egui::vec2(16.0, 23.0), egui::vec2(18.0, 18.0));
+    paint_icon(ui, &style.icon, ic, ACCENTS[style.color % ACCENTS.len()].1);
     ui.painter().text(
         rect.min + egui::vec2(36.0, 15.0),
         Align2::LEFT_CENTER,
@@ -80,12 +82,14 @@ pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal) -> egui::Response {
     resp
 }
 
-pub fn repo_card(ui: &mut egui::Ui, path: &Path, p: &Pal) -> egui::Response {
+pub fn repo_card(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(200.0, 70.0), Sense::click());
     ui.painter().rect_filled(rect, 8.0, if resp.hovered() { p.hover } else { p.input });
     ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, p.border));
+    let ic = egui::Rect::from_center_size(rect.min + egui::vec2(20.0, 24.0), egui::vec2(16.0, 16.0));
+    paint_icon(ui, &style.icon, ic, ACCENTS[style.color % ACCENTS.len()].1);
     ui.painter().text(
-        rect.min + egui::vec2(12.0, 24.0),
+        rect.min + egui::vec2(36.0, 24.0),
         Align2::LEFT_CENTER,
         repo_name(path),
         FontId::proportional(14.0),

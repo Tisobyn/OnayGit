@@ -78,6 +78,7 @@ impl App {
                             RichText::new("Use Open from disk, Clone, or Scan repositories.")
                                 .color(p.muted),
                         );
+                        ui.allocate_ui(egui::vec2(380.0, 0.0), |ui| tip_box(ui, &p, self.settings.tips, &mut self.tip));
                     });
                     return;
                 }
@@ -89,7 +90,7 @@ impl App {
                     ui.painter().rect_filled(rect, 6.0, p.hover);
                 }
                 let folder = egui::Rect::from_center_size(rect.min + egui::vec2(28.0, 26.0), egui::vec2(28.0, 28.0));
-                paint_icon(ui, "folder", folder, ACCENT);
+                paint_icon(ui, "folder", folder, accent());
                 ui.painter().text(
                     rect.min + egui::vec2(58.0, 17.0),
                     Align2::LEFT_CENTER,
@@ -113,7 +114,7 @@ impl App {
                         if self.grid {
                             ui.horizontal_wrapped(|ui| {
                                 for &i in &shown {
-                                    let r = repo_card(ui, &self.repos[i], &p);
+                                    let r = repo_card(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]));
                                     if r.clicked() {
                                         open = Some(self.repos[i].clone());
                                     }
@@ -127,7 +128,7 @@ impl App {
                             });
                         } else {
                             for &i in &shown {
-                                let r = repo_row(ui, &self.repos[i], &p);
+                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]));
                                 if r.clicked() {
                                     open = Some(self.repos[i].clone());
                                 }
