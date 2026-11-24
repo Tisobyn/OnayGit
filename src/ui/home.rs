@@ -10,6 +10,9 @@ impl App {
         let mut goto_settings = false;
         let mut create = false;
         let mut open_disk = false;
+        let mut del_space: Option<usize> = None;
+        let mut new_space = false;
+        let mut toggle: Option<(usize, PathBuf)> = None;
 
         egui::SidePanel::left("home_rail")
             .exact_width(260.0)
@@ -31,6 +34,34 @@ impl App {
                     self.status_msg.clear();
                     self.dialog = Some(Dialog::AddMachine);
                 }
+                ui.add_space(22.0);
+                rail_label(ui, "SPACES", &p);
+                if rail_item(ui, "layers", "All repositories", self.selected_space.is_none() && self.selected_machine.is_none(), &p).clicked() {
+                    self.selected_space = None;
+                    self.selected_machine = None;
+                }
+                for i in 0..self.spaces.len() {
+                    let name = self.spaces[i].name.clone();
+                    let r = rail_item(ui, "folder", &name, self.selected_space == Some(i) && self.selected_machine.is_none(), &p);
+                    if r.clicked() {
+                        self.selected_space = Some(i);
+                        self.selected_machine = None;
+                    }
+                    r.context_menu(|ui| {
+                        if ui.button("Delete space").clicked() {
+                            del_space = Some(i);
+                            ui.close_menu();
+                        }
+                    });
+                }
+                ui.horizontal(|ui| {
+                    let w = ui.available_width() - 40.0;
+                    let r = ui.add(egui::TextEdit::singleline(&mut self.space_name).hint_text("New space").desired_width(w));
+                    let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    if ui.small_button("Add").clicked() || enter {
+                        new_space = true;
+                    }
+                });
                 ui.add_space(22.0);
                 rail_label(ui, "QUICK ACTIONS", &p);
                 if rail_item(ui, "add", "Create repository", false, &p).clicked() {
@@ -83,6 +114,10 @@ impl App {
                 let q = self.search.to_lowercase();
                 let shown: Vec<usize> = (0..self.repos.len())
                     .filter(|&i| !git::is_remote(&self.repos[i]))
+                    .filter(|&i| match self.selected_space.and_then(|s| self.spaces.get(s)) {
+                        Some(s) => s.repos.contains(&self.repos[i]),
+                        None => true,
+                    })
                     .filter(|&i| q.is_empty() || repo_name(&self.repos[i]).to_lowercase().contains(&q))
                     .collect();
 
@@ -139,6 +174,17 @@ impl App {
                                             remove = Some(i);
                                             ui.close_menu();
                                         }
+                                        if !self.spaces.is_empty() {
+                                            ui.menu_button("Spaces", |ui| {
+                                                for (k, s) in self.spaces.iter().enumerate() {
+                                                    let inside = s.repos.contains(&self.repos[i]);
+                                                    if ui.selectable_label(inside, &s.name).clicked() {
+                                                        toggle = Some((k, self.repos[i].clone()));
+                                                        ui.close_menu();
+                                                    }
+                                                }
+                                            });
+                                        }
                                     });
                                 }
                             });
@@ -152,6 +198,17 @@ impl App {
                                     if ui.button("Remove from list").clicked() {
                                         remove = Some(i);
                                         ui.close_menu();
+                                    }
+                                    if !self.spaces.is_empty() {
+                                        ui.menu_button("Spaces", |ui| {
+                                            for (k, s) in self.spaces.iter().enumerate() {
+                                                let inside = s.repos.contains(&self.repos[i]);
+                                                if ui.selectable_label(inside, &s.name).clicked() {
+                                                    toggle = Some((k, self.repos[i].clone()));
+                                                    ui.close_menu();
+                                                }
+                                            }
+                                        });
                                     }
                                 });
                             }
@@ -228,6 +285,15 @@ impl App {
             if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
                 open = Some(d);
             }
+        }
+        if new_space {
+            self.add_space();
+        }
+        if let Some(i) = del_space {
+            self.remove_space(i);
+        }
+        if let Some((k, r)) = toggle {
+            self.toggle_in_space(k, &r);
         }
         if let Some(d) = scan {
             self.scan_folder(&d);

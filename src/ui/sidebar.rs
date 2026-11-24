@@ -9,6 +9,7 @@ impl App {
         let mut do_undo = false;
         let mut do_stash = false;
         let mut do_ai = false;
+        let mut toggle_dir: Option<String> = None;
         let mut ignore: Option<String> = None;
         let mut ask: Option<Confirm> = None;
         let mut new_tab = self.tab;
@@ -154,6 +155,9 @@ impl App {
                             }
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 ui.add_space(6.0);
+                                if ui.selectable_label(self.tree_view, "Tree").on_hover_text("Group files by folder").clicked() {
+                                    self.tree_view = !self.tree_view;
+                                }
                                 let has = !self.files.is_empty();
                                 if ui.add_enabled(has, egui::Button::new("Stash").small()).clicked() {
                                     do_stash = true;
@@ -166,7 +170,59 @@ impl App {
                         let q = self.filter.to_lowercase();
                         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                             ui.spacing_mut().item_spacing.y = 0.0;
-                            for f in self.files.iter().filter(|f| q.is_empty() || f.path.to_lowercase().contains(&q)) {
+                            let mut shown: Vec<&git::FileChange> =
+                                self.files.iter().filter(|f| q.is_empty() || f.path.to_lowercase().contains(&q)).collect();
+                            if self.tree_view {
+                                shown.sort_by(|a, b| a.path.cmp(&b.path));
+                            }
+                            let mut last_dirs: Vec<String> = vec![];
+                            for f in shown {
+                                let mut depth = 0usize;
+                                if self.tree_view {
+                                    let parts: Vec<&str> = f.path.split('/').collect();
+                                    let dirs = &parts[..parts.len() - 1];
+                                    let mut hidden = false;
+                                    for (d, name) in dirs.iter().enumerate() {
+                                        let full = dirs[..=d].join("/");
+                                        if last_dirs.get(d) != Some(&full) {
+                                            last_dirs.truncate(d);
+                                            last_dirs.push(full.clone());
+                                            if hidden {
+                                                continue;
+                                            }
+                                            let inside: Vec<&git::FileChange> = self
+                                                .files
+                                                .iter()
+                                                .filter(|x| x.path.starts_with(&format!("{full}/")))
+                                                .collect();
+                                            let open = !self.collapsed.contains(&full);
+                                            ui.horizontal(|ui| {
+                                                ui.add_space(6.0 + d as f32 * 14.0);
+                                                let mut all = inside.iter().all(|x| x.staged());
+                                                if ui.checkbox(&mut all, "").changed() {
+                                                    for x in &inside {
+                                                        actions.push(if all { Action::Stage(x.path.clone()) } else { Action::Unstage(x.path.clone()) });
+                                                    }
+                                                }
+                                                icon(ui, if open { "caretDown" } else { "caretRight" }, 12.0, p.muted);
+                                                let r = ui.add(
+                                                    egui::Label::new(RichText::new(*name).color(p.muted)).sense(Sense::click()),
+                                                );
+                                                ui.label(RichText::new(inside.len().to_string()).size(11.0).color(p.muted));
+                                                if r.clicked() {
+                                                    toggle_dir = Some(full.clone());
+                                                }
+                                            });
+                                        }
+                                        if self.collapsed.contains(&full) {
+                                            hidden = true;
+                                        }
+                                    }
+                                    if dirs.iter().enumerate().any(|(d, _)| self.collapsed.contains(&dirs[..=d].join("/"))) {
+                                        continue;
+                                    }
+                                    depth = dirs.len();
+                                }
                                 let sel = self.selected_file.as_deref() == Some(f.path.as_str());
                                 let fill = if sel { p.hover } else { Color32::TRANSPARENT };
                                 egui::Frame::none().fill(fill).inner_margin(egui::Margin::symmetric(6.0, 1.0)).show(
@@ -174,6 +230,7 @@ impl App {
                                     |ui| {
                                         ui.set_width(ui.available_width());
                                         ui.horizontal(|ui| {
+                                            ui.add_space(depth as f32 * 14.0);
                                             let mut staged = f.staged();
                                             if ui.checkbox(&mut staged, "").changed() {
                                                 actions.push(if staged {
@@ -183,6 +240,7 @@ impl App {
                                                 });
                                             }
                                             let (dir, name) = match f.path.rsplit_once('/') {
+                                                Some((_, n)) if self.tree_view => (String::new(), n.to_string()),
                                                 Some((d, n)) => (format!("{d}/"), n.to_string()),
                                                 None => (String::new(), f.path.clone()),
                                             };
@@ -259,6 +317,11 @@ impl App {
             });
 
         self.tab = new_tab;
+        if let Some(d) = toggle_dir {
+            if !self.collapsed.remove(&d) {
+                self.collapsed.insert(d);
+            }
+        }
         if do_ai {
             self.generate_message(ctx);
         }

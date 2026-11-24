@@ -20,6 +20,7 @@ src/
     refs.rs          stash, tag and worktree actions
     history.rs       commit actions, rewrite, conflicts
     tabs.rs          tabs and per-repository color/icon
+    spaces.rs        spaces (repository groups)
     tasks.rs         background tasks (network, AI, ssh) and their results
     accounts.rs      GitHub/GitLab accounts (tokens in the Keychain)
     hosting.rs       publish repository, pull requests
@@ -43,6 +44,7 @@ src/
     repo.rs          init, scan for repositories
     config.rs        git config
     external.rs      open in editor, show in Finder
+    images.rs        old version of image files for the diff
     ssh.rs           repositories on other machines (ssh://host/path)
     http.rs          small HTTP client over curl
     keychain.rs      secrets in the macOS Keychain
@@ -67,6 +69,7 @@ src/
     tabs.rs          tab bar and Cmd+T / Cmd+W
     settings_repo.rs Remotes and repository appearance pages
     tips.rs          welcome window and guided tips
+    switcher.rs      Cmd+P repository switcher
     accounts_page.rs Accounts and AI settings pages
     publish.rs       Publish, Pull requests, Add machine, machine view
 assets/              app icon (from 1git)

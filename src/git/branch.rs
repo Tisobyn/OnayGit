@@ -54,6 +54,11 @@ pub fn delete_branch(repo: &Path, branch: &str) -> Result<String, String> {
     run(repo, &["branch", "-D", branch])
 }
 
+/// The upstream branch of the current branch, for example `origin/main`.
+pub fn upstream(repo: &Path) -> Option<String> {
+    run(repo, &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+}
+
 /// (commits only in current, commits only in `other`).
 pub fn compare_counts(repo: &Path, other: &str) -> (u32, u32) {
     let spec = format!("HEAD...{other}");

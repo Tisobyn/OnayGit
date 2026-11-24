@@ -21,6 +21,12 @@ impl App {
                     new_compare = Some(None);
                     ui.close_menu();
                 }
+                if let Some(u) = &self.upstream {
+                    if ui.button(format!("Review upstream ({u})")).clicked() {
+                        new_compare = Some(Some(u.clone()));
+                        ui.close_menu();
+                    }
+                }
                 ui.separator();
                 let others = self.branches.iter().filter(|b| **b != self.branch);
                 for b in others.chain(self.remote_branches.iter()) {
@@ -31,11 +37,27 @@ impl App {
                 }
             });
         });
+        let mut direction: Option<bool> = None;
+        let mut integrate: Option<bool> = None;
         if let Some(b) = &self.compare {
             let (ours, theirs) = self.compare_counts;
             ui.horizontal(|ui| {
                 ui.add_space(8.0);
-                ui.label(RichText::new(format!("{theirs} behind, {ours} ahead of {b}")).size(11.5).color(p.muted));
+                if ui.selectable_label(!self.compare_outgoing, format!("Incoming {theirs}")).clicked() {
+                    direction = Some(false);
+                }
+                if ui.selectable_label(self.compare_outgoing, format!("Outgoing {ours}")).clicked() {
+                    direction = Some(true);
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.add_space(6.0);
+                    if ui.add_enabled(self.busy.is_none(), egui::Button::new("Rebase").small()).on_hover_text(format!("Rebase onto {b}")).clicked() {
+                        integrate = Some(false);
+                    }
+                    if ui.add_enabled(self.busy.is_none(), egui::Button::new("Merge").small()).on_hover_text(format!("Merge {b} into {}", self.branch)).clicked() {
+                        integrate = Some(true);
+                    }
+                });
             });
         }
         ui.separator();
@@ -152,6 +174,8 @@ impl App {
                             for (label, a) in [
                                 ("Reword...", CommitAction::Reword),
                                 ("Squash into previous", CommitAction::Squash),
+                                ("Move newer", CommitAction::MoveNewer),
+                                ("Move older", CommitAction::MoveOlder),
                                 ("Drop commit", CommitAction::Drop),
                             ] {
                                 if ui.button(label).clicked() {
@@ -176,6 +200,21 @@ impl App {
             }
         });
 
+        if let Some(o) = direction {
+            self.compare_outgoing = o;
+            self.selected_commit = None;
+            self.commit_diff.clear();
+            self.refresh();
+        }
+        if let (Some(merge), Some(other), Some(repo)) = (integrate, self.compare.clone(), self.repo()) {
+            if merge {
+                let r = git::merge(&repo, &other);
+                self.report(r);
+                self.refresh();
+            } else {
+                self.rebase_onto = Some(other);
+            }
+        }
         if let Some(c) = new_compare {
             self.set_compare(c);
         }

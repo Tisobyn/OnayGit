@@ -38,3 +38,13 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 22. Pull / merge requests
 - [x] 23. AI commit messages (Claude Code, Codex, any API)
 - [x] 24. SSH remote repositories (machines)
+
+## Round 2 (gaps found against 1git)
+- [x] 25. Changes tree view (folders, folder checkbox)
+- [x] 26. Word-level highlights in the diff
+- [x] 27. Sync review: incoming / outgoing, Merge, Rebase
+- [x] 28. Image diff (before / after)
+- [x] 29. Quick repository switcher and shortcuts
+- [x] 30. Move commits in history (newer / older)
+- [x] 31. Spaces (groups of repositories)
+- [ ] Not done: expand context lines in the diff, per-space keybind settings

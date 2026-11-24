@@ -97,11 +97,13 @@ impl App {
                 self.stash_diff.clear();
             }
         }
+        self.upstream = git::upstream(&repo);
         self.load_diff(&repo);
 
         // Compare view
         if let Some(other) = self.compare.clone() {
-            self.compare_commits = git::log_range(&repo, &format!("HEAD..{other}"));
+            let range = if self.compare_outgoing { format!("{other}..HEAD") } else { format!("HEAD..{other}") };
+            self.compare_commits = git::log_range(&repo, &range);
             self.compare_counts = git::compare_counts(&repo, &other);
         } else {
             self.compare_commits.clear();
@@ -115,6 +117,12 @@ impl App {
             .as_ref()
             .and_then(|p| self.files.iter().find(|f| &f.path == p))
             .cloned();
+        self.img_before = None;
+        if let Some(f) = &file {
+            if git::is_image(&f.path) && !git::is_remote(repo) && f.work != '?' {
+                self.img_before = git::blob_to_temp(repo, "HEAD", &f.path);
+            }
+        }
         let Some(f) = file else {
             self.raw_diff.clear();
             self.diff.clear();

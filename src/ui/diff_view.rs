@@ -10,6 +10,47 @@ pub enum DiffEvent {
     Hunk(usize),
 }
 
+/// The line that pairs with `idx` inside a block of removed then added lines.
+fn partner(lines: &[DiffLine], idx: usize) -> Option<usize> {
+    match lines[idx].kind {
+        Kind::Del => {
+            let mut s = idx;
+            while s > 0 && lines[s - 1].kind == Kind::Del {
+                s -= 1;
+            }
+            let mut e = idx;
+            while e + 1 < lines.len() && lines[e + 1].kind == Kind::Del {
+                e += 1;
+            }
+            let p = e + 1 + (idx - s);
+            (p < lines.len() && lines[p].kind == Kind::Add).then_some(p)
+        }
+        Kind::Add => {
+            let mut a = idx;
+            while a > 0 && lines[a - 1].kind == Kind::Add {
+                a -= 1;
+            }
+            let mut s = a;
+            while s > 0 && lines[s - 1].kind == Kind::Del {
+                s -= 1;
+            }
+            let p = s + (idx - a);
+            (p < a && lines[p].kind == Kind::Del).then_some(p)
+        }
+        _ => None,
+    }
+}
+
+/// Character range of `a` that differs from `b` (common start and end removed).
+fn changed_range(a: &str, b: &str) -> Option<(usize, usize)> {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let pre = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let suf = a[pre..].iter().rev().zip(b[pre..].iter().rev()).take_while(|(x, y)| x == y).count();
+    let end = a.len() - suf;
+    (end > pre && (pre > 0 || suf > 0)).then_some((pre, end))
+}
+
 /// Draw `lines`. With `selection` set, changed lines get a checkbox in the gutter
 /// and every hunk header gets a button labelled `hunk_label`.
 pub fn draw_diff(
@@ -23,7 +64,7 @@ pub fn draw_diff(
     let mut events = Vec::new();
     let font = FontId::monospace(size);
     let row_h = size + 5.0;
-    let cw = ui.fonts(|f| f.glyph_width(&font, '0'));
+    let cw = ui.fonts(|f| f.layout_no_wrap("0".repeat(100), font.clone(), Color32::WHITE).size().x) / 100.0;
     let num_w = cw * 5.0;
     let off = if selection.is_some() { cw * 3.0 } else { 0.0 };
     let gutter_w = off + num_w * 2.0 + cw;
@@ -151,6 +192,16 @@ pub fn draw_diff(
                             font.clone(),
                             p.muted,
                         );
+                        if let Some((a, b)) = partner(lines, idx).and_then(|q| changed_range(&l.text, &lines[q].text)) {
+                            let c = if l.kind == Kind::Add {
+                                Color32::from_rgba_unmultiplied(63, 185, 80, 80)
+                            } else {
+                                Color32::from_rgba_unmultiplied(248, 81, 73, 80)
+                            };
+                            let x0 = rect.min.x + text_x + cw * a as f32;
+                            let hl = egui::Rect::from_min_max(egui::pos2(x0, rect.min.y + 1.0), egui::pos2(x0 + cw * (b - a) as f32, rect.max.y - 1.0));
+                            painter.rect_filled(hl, 2.0, c);
+                        }
                         painter.text(
                             egui::pos2(rect.min.x + text_x, cy),
                             Align2::LEFT_CENTER,

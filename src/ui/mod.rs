@@ -14,6 +14,7 @@ pub mod sidebar;
 pub mod tabs;
 pub mod publish;
 pub mod stash;
+pub mod switcher;
 pub mod theme;
 pub mod tips;
 pub mod toolbar;

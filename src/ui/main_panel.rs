@@ -91,7 +91,32 @@ impl App {
                 }
             }
 
-            if lines.is_empty() {
+            let image_file = changes
+                .then(|| self.selected_file.clone())
+                .flatten()
+                .filter(|f| git::is_image(f))
+                .filter(|_| self.repo().is_some_and(|r| !git::is_remote(&r)));
+            if let (Some(file), Some(repo)) = (image_file, self.repo()) {
+                let after = repo.join(&file);
+                let removed = !after.exists();
+                ui.columns(2, |cols| {
+                    cols[0].label(RichText::new("Before").color(p.muted));
+                    match &self.img_before {
+                        Some(b) => {
+                            cols[0].add(egui::Image::new(format!("file://{}", b.display())).max_width(cols[0].available_width()).max_height(420.0));
+                        }
+                        None => {
+                            cols[0].label(RichText::new("New file").color(p.muted));
+                        }
+                    }
+                    cols[1].label(RichText::new("After").color(p.muted));
+                    if removed {
+                        cols[1].label(RichText::new("Deleted").color(p.muted));
+                    } else {
+                        cols[1].add(egui::Image::new(format!("file://{}", after.display())).max_width(cols[1].available_width()).max_height(420.0));
+                    }
+                });
+            } else if lines.is_empty() {
                 ui.vertical_centered(|ui| {
                     ui.add_space(ui.available_height() / 3.0);
                     let msg = match self.tab {

@@ -13,6 +13,8 @@ pub enum CommitAction {
     Reword,
     Squash,
     Drop,
+    MoveOlder,
+    MoveNewer,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -72,6 +74,17 @@ impl App {
                 self.reword_hash = hash;
                 self.dialog = Some(Dialog::Reword);
                 return;
+            }
+            CommitAction::MoveOlder | CommitAction::MoveNewer => {
+                let target = if action == CommitAction::MoveOlder {
+                    Some(hash.clone())
+                } else {
+                    self.commits.iter().find(|c| c.parents.contains(&hash)).map(|c| c.hash.clone())
+                };
+                match target {
+                    Some(t) => git::rewrite(&repo, git::RewriteOp::MoveOlder, &t, ""),
+                    None => Err("This is the newest commit".into()),
+                }
             }
             CommitAction::CherryPick => git::cherry_pick(&repo, &hash),
             CommitAction::Revert => git::revert(&repo, &hash),

@@ -177,6 +177,19 @@ impl App {
                         ui.label(format!("OnayGit {}", env!("CARGO_PKG_VERSION")));
                         ui.label(RichText::new("A simple Git client written in Rust.").color(p.muted));
                         ui.add_space(10.0);
+                        ui.label(RichText::new("Shortcuts").size(15.0));
+                        for (k, d) in [
+                            ("Cmd+P", "Switch repository"),
+                            ("Cmd+T / Cmd+W", "New tab / close tab"),
+                            ("Cmd+1 / Cmd+2", "Changes / History"),
+                            ("Cmd+,", "Settings"),
+                        ] {
+                            ui.horizontal(|ui| {
+                                ui.label(RichText::new(k).monospace());
+                                ui.label(RichText::new(d).color(p.muted));
+                            });
+                        }
+                        ui.add_space(10.0);
                         ui.label(RichText::new(format!("Repository list: {}", repos_path().display())).color(p.muted));
                         ui.label(RichText::new(format!("Settings file: {}", settings_path().display())).color(p.muted));
                     }

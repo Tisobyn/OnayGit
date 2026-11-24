@@ -10,6 +10,7 @@ pub mod refs;
 pub mod tabs;
 pub mod tasks;
 mod repos;
+pub mod spaces;
 mod staging;
 
 #[derive(PartialEq, Clone, Copy)]
@@ -64,6 +65,7 @@ pub enum Dialog {
     Reword,
     Publish,
     PullRequests,
+    Switcher,
     AddMachine,
 }
 
@@ -111,6 +113,9 @@ pub struct App {
     pub compare: Option<String>,
     pub compare_commits: Vec<Commit>,
     pub compare_counts: (u32, u32),
+    pub compare_outgoing: bool,
+    pub rebase_onto: Option<String>,
+    pub upstream: Option<String>,
     pub ignore_text: String,
     pub stashes: Vec<git::Stash>,
     pub stash_open: bool,
@@ -141,6 +146,13 @@ pub struct App {
     pub repo_styles: HashMap<PathBuf, RepoStyle>,
     pub tip: usize,
     pub tasks: HashSet<String>,
+    pub tree_view: bool,
+    pub spaces: Vec<spaces::Space>,
+    pub selected_space: Option<usize>,
+    pub space_name: String,
+    pub switcher_text: String,
+    pub img_before: Option<PathBuf>,
+    pub collapsed: HashSet<String>,
     pub accounts: Vec<git::Account>,
     pub acct_provider: git::Provider,
     pub acct_host: String,
@@ -223,6 +235,9 @@ impl App {
             compare: None,
             compare_commits: vec![],
             compare_counts: (0, 0),
+            compare_outgoing: false,
+            rebase_onto: None,
+            upstream: None,
             ignore_text: String::new(),
             stashes: vec![],
             stash_open: true,
@@ -253,6 +268,13 @@ impl App {
             repo_styles: tabs::load_styles(),
             tip: 0,
             tasks: HashSet::new(),
+            tree_view: false,
+            spaces: spaces::load_spaces(),
+            selected_space: None,
+            space_name: String::new(),
+            switcher_text: String::new(),
+            img_before: None,
+            collapsed: HashSet::new(),
             accounts: accounts::load_accounts(),
             acct_provider: git::Provider::GitHub,
             acct_host: String::new(),
@@ -352,6 +374,9 @@ impl eframe::App for App {
 
         self.onboarding_window(ctx);
         self.confirm_window(ctx);
+        if let (Some(other), Some(repo)) = (self.rebase_onto.take(), self.repo()) {
+            self.spawn_in(ctx, repo, "Rebasing", &["rebase", &other]);
+        }
         self.manage_windows(ctx);
 
         self.tab_shortcuts(ctx);

@@ -17,6 +17,7 @@ impl App {
                     git::RewriteOp::Drop => "Drop",
                     git::RewriteOp::Squash => "Squash",
                     git::RewriteOp::Reword => "Reword",
+                    git::RewriteOp::MoveOlder => "Move",
                 };
                 (
                     "Rewrite history",
