@@ -72,6 +72,13 @@ impl App {
                 .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
                 .show(ctx, |ui| self.rule_panel(ui, &p, target));
         }
+        if self.section == Section::Ai && self.ai_adding {
+            egui::SidePanel::right("ai_panel")
+                .exact_width(514.0)
+                .resizable(false)
+                .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
+                .show(ctx, |ui| self.ai_panel(ui, &p));
+        }
         if self.section == Section::Git && self.git_editing {
             egui::SidePanel::right("identity_panel")
                 .exact_width(514.0)

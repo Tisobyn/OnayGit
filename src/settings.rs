@@ -25,6 +25,7 @@ pub struct Settings {
     pub refresh_secs: u64,
     pub editor: String,
     pub ai: AiConfig,
+    pub ai_added: bool,
 }
 
 impl Default for Settings {
@@ -49,6 +50,7 @@ impl Default for Settings {
             refresh_secs: 3,
             editor: "open".into(),
             ai: AiConfig::default(),
+            ai_added: false,
         }
     }
 }
@@ -93,6 +95,9 @@ impl Settings {
                 "ai_provider" => s.ai.provider = AiProvider::from_key(v).unwrap_or(AiProvider::ClaudeCode),
                 "ai_command" => s.ai.command = v.to_string(),
                 "ai_model" => s.ai.model = v.to_string(),
+                "ai_added" => s.ai_added = v == "true",
+                "ai_name" => s.ai.name = v.to_string(),
+                "ai_instructions" => s.ai.instructions = v.replace("\\n", "\n"),
                 "ai_base_url" => s.ai.base_url = v.to_string(),
                 _ => {}
             }
@@ -102,7 +107,7 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
@@ -117,6 +122,9 @@ impl Settings {
             self.ai.command.replace('\n', " "),
             self.ai.model,
             self.ai.base_url,
+            self.ai_added,
+            self.ai.name.replace('\n', " "),
+            self.ai.instructions.replace('\n', "\\n"),
             self.ui_font, self.code_font, self.grain, self.grain_pattern, self.grain_strength, self.commit_badges
         );
         let _ = std::fs::write(settings_path(), text);

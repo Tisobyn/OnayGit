@@ -50,6 +50,20 @@ pub struct AiConfig {
     pub model: String,
     /// Base URL of an OpenAI compatible API, for example https://api.openai.com/v1.
     pub base_url: String,
+    /// Name shown in Settings.
+    pub name: String,
+    /// Extra guidance added to the prompt.
+    pub instructions: String,
+}
+
+impl AiConfig {
+    pub fn prompt(&self) -> String {
+        if self.instructions.trim().is_empty() {
+            PROMPT.to_string()
+        } else {
+            format!("{PROMPT}\n\nAdditional instructions: {}", self.instructions.trim())
+        }
+    }
 }
 
 impl Default for AiConfig {
@@ -59,6 +73,8 @@ impl Default for AiConfig {
             command: String::new(),
             model: "gpt-4o-mini".into(),
             base_url: "https://api.openai.com/v1".into(),
+            name: String::new(),
+            instructions: String::new(),
         }
     }
 }
@@ -95,10 +111,10 @@ pub fn parse_message(out: &str) -> (String, String) {
     (summary, body)
 }
 
-fn run_shell(command: &str, diff: &str) -> Result<String, String> {
+fn run_shell(command: &str, prompt: &str, diff: &str) -> Result<String, String> {
     let mut child = Command::new("/bin/zsh")
         .args(["-lc", command])
-        .env("ONAY_PROMPT", PROMPT)
+        .env("ONAY_PROMPT", prompt)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -120,20 +136,20 @@ fn run_shell(command: &str, diff: &str) -> Result<String, String> {
 pub fn generate(cfg: &AiConfig, api_key: Option<&str>, diff: &str) -> Result<(String, String), String> {
     let diff = trim_diff(diff);
     let raw = match cfg.provider {
-        AiProvider::ClaudeCode => run_shell("claude -p \"$ONAY_PROMPT\"", &diff)?,
-        AiProvider::Codex => run_shell("codex exec \"$ONAY_PROMPT\"", &diff)?,
+        AiProvider::ClaudeCode => run_shell("claude -p \"$ONAY_PROMPT\"", &cfg.prompt(), &diff)?,
+        AiProvider::Codex => run_shell("codex exec \"$ONAY_PROMPT\"", &cfg.prompt(), &diff)?,
         AiProvider::Custom => {
             if cfg.command.trim().is_empty() {
                 return Err("Set a command in Settings > AI".into());
             }
-            run_shell(&cfg.command, &diff)?
+            run_shell(&cfg.command, &cfg.prompt(), &diff)?
         }
         AiProvider::Api => {
             let key = api_key.ok_or("Add an API key in Settings > AI")?;
             let body = json!({
                 "model": cfg.model,
                 "messages": [
-                    { "role": "system", "content": PROMPT },
+                    { "role": "system", "content": cfg.prompt() },
                     { "role": "user", "content": diff },
                 ],
             });

@@ -448,6 +448,10 @@ impl App {
                     "git" => Section::Git,
                     "editor" => Section::Editor,
                     "ai" => Section::Ai,
+                    "aiadd" => {
+                        app.ai_adding = true;
+                        Section::Ai
+                    }
                     "help" => Section::Help,
                     "remotes" => Section::Remotes,
                     "repostyle" => Section::RepoStyle,
