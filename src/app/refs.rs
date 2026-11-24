@@ -13,7 +13,7 @@ impl App {
     /// Stash every change. The summary box text is used as the message.
     pub fn stash_changes(&mut self) {
         let Some(repo) = self.repo() else { return };
-        let r = git::stash_push(&repo, &self.summary);
+        let r = git::stash_push(&repo, self.summary.lines().next().unwrap_or(""));
         if self.report(r) {
             self.summary.clear();
             self.stash_open = true;

@@ -39,6 +39,7 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "reconnect" => Some(include_bytes!("../../assets/icons/reconnect.svg")),
         "remove" => Some(include_bytes!("../../assets/icons/remove.svg")),
         "settings" => Some(include_bytes!("../../assets/icons/settings.svg")),
+        "search" => Some(include_bytes!("../../assets/icons/search.svg")),
         "shield" => Some(include_bytes!("../../assets/icons/shield.svg")),
         "sparkle" => Some(include_bytes!("../../assets/icons/sparkle.svg")),
         "stop" => Some(include_bytes!("../../assets/icons/stop.svg")),

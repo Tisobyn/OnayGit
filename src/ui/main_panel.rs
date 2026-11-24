@@ -41,10 +41,22 @@ impl App {
                     .as_ref()
                     .and_then(|path| self.files.iter().find(|f| &f.path == path));
                 if let Some(f) = file {
-                    egui::Frame::none().inner_margin(egui::Margin::symmetric(10.0, 6.0)).show(ui, |ui| {
+                    let adds = lines.iter().filter(|l| l.kind == Kind::Add).count();
+                    let dels = lines.iter().filter(|l| l.kind == Kind::Del).count();
+                    let (dir, name) = match f.path.rsplit_once('/') {
+                        Some((d, n)) => (d.to_string(), n.to_string()),
+                        None => (String::new(), f.path.clone()),
+                    };
+                    egui::Frame::none().inner_margin(egui::Margin::symmetric(14.0, 6.0)).show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new(&f.path).size(13.0));
+                            ui.label(RichText::new(name).size(13.5));
+                            if !dir.is_empty() {
+                                ui.label(RichText::new(dir).size(12.0).color(p.muted));
+                            }
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.label(RichText::new(format!("\u{2212}{dels}")).size(12.0).color(Color32::from_rgb(248, 81, 73)));
+                                ui.label(RichText::new(format!("+{adds}")).size(12.0).color(Color32::from_rgb(63, 185, 80)));
+                                ui.add_space(6.0);
                                 if ui.small_button("Show in Finder").clicked() {
                                     reveal = true;
                                 }
@@ -119,12 +131,16 @@ impl App {
             } else if lines.is_empty() {
                 ui.vertical_centered(|ui| {
                     ui.add_space(ui.available_height() / 3.0);
-                    let msg = match self.tab {
-                        Tab::Changes if self.files.is_empty() => "No local changes",
-                        Tab::Changes => "No diff to show",
-                        Tab::History => "Select a commit",
+                    let (msg, hint) = match self.tab {
+                        Tab::Changes if self.files.is_empty() => ("No local changes", ""),
+                        Tab::Changes if self.selected_file.is_none() => ("Select a file to inspect", "Choose a file to inspect its diff. Check the whole files you want to commit."),
+                        Tab::Changes => ("No diff to show", ""),
+                        Tab::History => ("Select a commit", ""),
                     };
-                    ui.label(RichText::new(msg).size(17.0).color(p.muted));
+                    ui.label(RichText::new(msg).size(15.0).color(p.text));
+                    if !hint.is_empty() {
+                        ui.label(RichText::new(hint).size(12.5).color(p.muted));
+                    }
                     ui.allocate_ui(egui::vec2(380.0, 0.0), |ui| tip_box(ui, &p, self.settings.tips, &mut self.tip));
                 });
             } else if changes && !stash_view && !conflicted {

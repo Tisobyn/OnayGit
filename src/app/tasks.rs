@@ -106,8 +106,7 @@ impl App {
             }
             (T_AI, Ok(text)) => {
                 let (s, b) = text.split_once('\u{1f}').unwrap_or((text.as_str(), ""));
-                self.summary = s.to_string();
-                self.desc = b.to_string();
+                self.set_message(s, b);
             }
             (T_INFO, Ok(lines)) => {
                 for l in lines.lines() {

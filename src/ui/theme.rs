@@ -81,7 +81,6 @@ pub struct Pal {
     pub del_bg: Color32,
     pub add_gut: Color32,
     pub del_gut: Color32,
-    pub hunk_bg: Color32,
     /// Window frame around the content card.
     pub chrome: Color32,
 }
@@ -107,7 +106,6 @@ pub fn pal(theme: Theme) -> Pal {
             add_gut: c(32, 62, 45),
             del_gut: c(72, 40, 46),
             chrome: c(62, 62, 66),
-            hunk_bg: c(36, 42, 50),
         },
         Theme::Midnight => Pal {
             bg: c(13, 17, 23),
@@ -124,7 +122,6 @@ pub fn pal(theme: Theme) -> Pal {
             add_gut: c(22, 54, 38),
             del_gut: c(62, 30, 36),
             chrome: c(22, 24, 30),
-            hunk_bg: c(22, 32, 48),
         },
         Theme::Nord => Pal {
             bg: c(46, 52, 64),
@@ -141,7 +138,6 @@ pub fn pal(theme: Theme) -> Pal {
             add_gut: c(52, 78, 70),
             del_gut: c(80, 54, 62),
             chrome: c(34, 39, 49),
-            hunk_bg: c(52, 60, 76),
         },
         Theme::Light => Pal {
             bg: c(255, 255, 255),
@@ -158,7 +154,6 @@ pub fn pal(theme: Theme) -> Pal {
             add_gut: c(204, 240, 214),
             del_gut: c(255, 215, 213),
             chrome: c(226, 228, 232),
-            hunk_bg: c(221, 244, 255),
         },
         Theme::Sand => Pal {
             bg: c(253, 246, 227),
@@ -175,7 +170,6 @@ pub fn pal(theme: Theme) -> Pal {
             add_gut: c(200, 230, 176),
             del_gut: c(244, 204, 190),
             chrome: c(228, 220, 198),
-            hunk_bg: c(222, 232, 230),
         },
     }
 }

@@ -135,32 +135,6 @@ pub fn page_title(ui: &mut egui::Ui, text: &str, p: &Pal) {
     ui.add_space(12.0);
 }
 
-pub fn setting_row(
-    ui: &mut egui::Ui,
-    title: &str,
-    desc: &str,
-    p: &Pal,
-    add: impl FnOnce(&mut egui::Ui),
-) {
-    egui::Frame::none()
-        .fill(p.input)
-        .stroke(egui::Stroke::new(1.0_f32, p.border))
-        .rounding(8.0)
-        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.set_width(300.0);
-                    ui.label(RichText::new(title).size(13.5).color(p.text));
-                    ui.label(RichText::new(desc).size(12.0).color(p.muted));
-                });
-                add(ui);
-            });
-        });
-    ui.add_space(8.0);
-}
-
 /// Small colored square for a change type: modified, added, deleted, renamed, conflict.
 pub fn status_badge(ui: &mut egui::Ui, badge: char) {
     let (color, mark) = match badge {
@@ -286,4 +260,22 @@ pub fn key_chip(ui: &mut egui::Ui, p: &Pal, text: &str) {
     egui::Frame::none().fill(p.hover).rounding(5.0).inner_margin(egui::Margin::symmetric(10.0, 4.0)).show(ui, |ui| {
         ui.label(RichText::new(text).size(12.5).color(p.text));
     });
+}
+
+/// Round checkbox as in 1git. Returns the response; the caller toggles its own state.
+pub fn round_check(ui: &mut egui::Ui, p: &Pal, checked: bool) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(18.0, 18.0), Sense::click());
+    paint_round_check(ui, p, rect, checked, resp.hovered());
+    resp
+}
+
+pub fn paint_round_check(ui: &egui::Ui, p: &Pal, rect: egui::Rect, checked: bool, hover: bool) {
+    let c = egui::Rect::from_center_size(rect.center(), egui::vec2(15.0, 15.0));
+    if checked {
+        ui.painter().circle_filled(c.center(), 7.5, accent());
+        paint_icon(ui, "check", c.shrink(3.5), Color32::WHITE);
+    } else {
+        let col = if hover { p.muted } else { p.border };
+        ui.painter().circle_stroke(c.center(), 7.0, egui::Stroke::new(1.2_f32, col));
+    }
 }

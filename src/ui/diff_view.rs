@@ -63,7 +63,7 @@ pub fn draw_diff(
 ) -> Vec<DiffEvent> {
     let mut events = Vec::new();
     let font = FontId::monospace(size);
-    let row_h = size + 5.0;
+    let row_h = size + 8.0;
     let cw = ui.fonts(|f| f.layout_no_wrap("0".repeat(100), font.clone(), Color32::WHITE).size().x) / 100.0;
     let num_w = cw * 5.0;
     let off = if selection.is_some() { cw * 3.0 } else { 0.0 };
@@ -90,7 +90,6 @@ pub fn draw_diff(
 
                 match l.kind {
                     Kind::Hunk => {
-                        painter.rect_filled(rect, 0.0, p.hunk_bg);
                         let mut text_start = rect.min.x + off + num_w * 2.0 + cw;
                         if selection.is_some() {
                             let b = egui::Rect::from_min_size(
@@ -185,12 +184,21 @@ pub fn draw_diff(
                                 p.muted,
                             );
                         }
+                        let mark = match l.kind {
+                            Kind::Add => Color32::from_rgb(63, 185, 80),
+                            Kind::Del => Color32::from_rgb(248, 81, 73),
+                            _ => p.muted,
+                        };
+                        if l.kind != Kind::Ctx {
+                            let bar = egui::Rect::from_min_size(egui::pos2(rect.min.x + off + num_w * 2.0 + cw * 0.8, rect.min.y), egui::vec2(2.0, row_h));
+                            painter.rect_filled(bar, 0.0, mark);
+                        }
                         painter.text(
                             egui::pos2(rect.min.x + off + num_w * 2.0 + cw * 1.5, cy),
                             Align2::LEFT_CENTER,
                             sign,
                             font.clone(),
-                            p.muted,
+                            mark,
                         );
                         if let Some((a, b)) = partner(lines, idx).and_then(|q| changed_range(&l.text, &lines[q].text)) {
                             let c = if l.kind == Kind::Add {
