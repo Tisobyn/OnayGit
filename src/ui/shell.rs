@@ -82,6 +82,9 @@ impl App {
         let mut go_home = false;
         let mut leave_settings = false;
         let mut new_tab = false;
+        let mut reorder: Option<(usize, usize)> = None;
+        let mut rects: Vec<egui::Rect> = vec![];
+        let mut dragged: Option<usize> = None;
         let current = self.repo();
 
         egui::TopBottomPanel::top("titlebar")
@@ -123,7 +126,14 @@ impl App {
                         };
                         let font = FontId::proportional(12.5);
                         let tw = ui.fonts(|f| f.layout_no_wrap(label.clone(), font.clone(), p.text).size().x);
-                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(tw + 70.0, 34.0), Sense::click());
+                        let (rect, _) = ui.allocate_exact_size(egui::vec2(tw + 70.0, 34.0), Sense::hover());
+                        // A stable id per repository keeps the drag alive while tabs swap places.
+                        let resp = ui.interact(rect, egui::Id::new(("tab", path.clone())), Sense::click_and_drag());
+                        rects.push(rect);
+                        if resp.dragged() {
+                            dragged = Some(i);
+                            ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
+                        }
                         if active {
                             let r = egui::Rounding { nw: 10.0, ne: 10.0, sw: 0.0, se: 0.0 };
                             ui.painter().rect_filled(rect, r, p.bg);
@@ -165,6 +175,14 @@ impl App {
                         }
                     }
 
+                    if let (Some(from), Some(pos)) = (dragged, ctx.pointer_latest_pos()) {
+                        if let Some(to) = rects.iter().position(|r| r.x_range().contains(pos.x)) {
+                            if to != from {
+                                reorder = Some((from, to));
+                            }
+                        }
+                    }
+
                     if self.screen == Screen::Settings {
                         let font = FontId::proportional(12.5);
                         let (rect, resp) = ui.allocate_exact_size(egui::vec2(120.0, 34.0), Sense::click());
@@ -191,6 +209,10 @@ impl App {
         }
         if leave_settings {
             self.screen = if self.current.is_some() { Screen::Repo } else { Screen::Home };
+        }
+        if let Some((from, to)) = reorder {
+            self.move_tab(from, to);
+            ctx.request_repaint();
         }
         if let Some(i) = activate {
             self.activate_tab(i);

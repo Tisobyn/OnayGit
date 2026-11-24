@@ -93,6 +93,16 @@ impl App {
         }
     }
 
+    /// Move a tab to a new position (drag and drop in the title bar).
+    pub fn move_tab(&mut self, from: usize, to: usize) {
+        if from >= self.tabs.len() || to >= self.tabs.len() || from == to {
+            return;
+        }
+        let t = self.tabs.remove(from);
+        self.tabs.insert(to, t);
+        self.save_tabs();
+    }
+
     pub fn close_tab(&mut self, i: usize) {
         if i >= self.tabs.len() {
             return;
