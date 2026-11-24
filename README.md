@@ -1,12 +1,102 @@
+<div align="center">
+
+<img src="assets/icon-512.png" width="112" alt="OnayGit icon">
+
 # OnayGit
 
-A simple Git client in Rust with a GitHub Desktop look. Built with egui and the git command line.
+**A fast, calm Git client for the Mac. Rust, egui and the plain `git` command.**
+
+![Rust](https://img.shields.io/badge/Rust-2021-orange?logo=rust&logoColor=white)
+![egui](https://img.shields.io/badge/UI-egui%200.29-5b8def)
+![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.1.0-3fb950)
+
+<br>
+
+<img src="docs/screenshots/history.png" alt="OnayGit History tab" width="900">
+
+</div>
+
+---
+
+## Why OnayGit
+
+- **Native speed.** One small Rust binary. No Electron, no web view.
+- **Real git underneath.** It runs your own `git`, so results always match the terminal.
+- **Clear on screen.** Stage by file, hunk or single line. Read diffs with word highlight and syntax colours.
+- **Many repos, one window.** Tabs, spaces (groups of repos), and repositories on other machines over SSH.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/repo.png" alt="Changes"><br><sub><b>Changes.</b> Stage files, hunks or lines. Commit, amend, undo.</sub></td>
+    <td width="50%"><img src="docs/screenshots/home.png" alt="Home"><br><sub><b>Home.</b> All repositories, spaces, machines and quick actions.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/branches.png" alt="Branch menu"><br><sub><b>Branches.</b> Switch, create and merge. Right-click to delete.</sub></td>
+    <td width="50%"><img src="docs/screenshots/repos.png" alt="Repository menu"><br><sub><b>Repositories.</b> Filter, jump between repos, add new ones.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/ignored.png" alt="Ignored changes"><br><sub><b>Ignored changes.</b> Local history for files git ignores, like <code>.env</code>.</sub></td>
+    <td width="50%"><img src="docs/screenshots/settingsabout.png" alt="About"><br><sub><b>Settings.</b> Themes, accounts, AI, editors, shortcuts and more.</sub></td>
+  </tr>
+</table>
+
+## Features
+
+| | |
+|---|---|
+| **Changes** | File list or tree, line and hunk staging, commit, amend, undo last commit, discard, ignore |
+| **History** | Commit graph, changed files column, pictures and co-authors, tag, cherry-pick, revert, reset, reword, squash |
+| **Branches** | Switch, create, merge, delete, compare, worktrees, stash |
+| **Remotes** | Fetch, pull, push, publish to GitHub or GitLab, pull requests |
+| **Organise** | Tabs, spaces with icons and colours, quick switcher, SSH machines |
+| **Ignored changes** | Save snapshots of ignored files and see what changed |
+| **AI** | Write a commit message with your own provider or command |
+| **Look** | 5 themes, accent colours, fonts, optional grain |
+
+## Install
+
+You need a Mac, [Rust](https://rustup.rs) and `git`.
 
 ```bash
+git clone https://github.com/Tisobyn/OnayGit.git
+cd OnayGit
 cargo run --release
 ```
 
-## Project layout
+The optional [`gh`](https://cli.github.com) tool is used to find profile pictures and for pull requests.
+
+## Shortcuts
+
+| Keys | Action |
+|---|---|
+| `Cmd+T` | New tab (Home) |
+| `Cmd+W` | Close tab |
+| `Cmd+1` ... `9` | Go to tab |
+| `Cmd+P` | Switch repository |
+| `Cmd+F` | Filter files |
+| `Cmd+,` | Settings |
+
+All shortcuts can be changed in Settings > Keybinds.
+
+## Commit pictures and co-authors
+
+History rows show the author and any `Co-authored-by` people with round profile pictures. Pictures come from the GitHub CLI, GitHub noreply emails or Gravatar and are cached in `~/.onaygit_avatars`. You can turn them off in Settings > Appearance.
+
+The people icon in the commit box adds co-authors to the next commit. Choices are saved in `~/.onaygit_coauthors`.
+
+## Where your data lives
+
+Settings are plain files in your home folder (`~/.onaygit_*`). Tokens are in the macOS Keychain. Nothing is sent anywhere except to the git hosts you sign in to.
+
+## Version and About
+
+Settings > About shows the version, build (git hash and date), platform, git version, links and credits. The version comes from `Cargo.toml`.
+
+<details>
+<summary><b>Project layout</b></summary>
 
 ```
 src/
@@ -60,6 +150,7 @@ src/
     home.rs          start screen (no repo open)
     settings_page.rs settings screens
     toolbar.rs       top bar: repo, branch, sync
+    toolbar_menu.rs  repository and branch dropdown panels
     sidebar.rs       Changes and History tabs
     main_panel.rs    diff of the selected file or commit
     dialogs.rs       confirm dialogs and the error bar
@@ -85,12 +176,8 @@ PORTING.md           list of 1git features and what is done
 
 Rule of thumb: git commands live in `git/`, drawing lives in `ui/`, state lives in `app/`.
 
-## Version and About
+</details>
 
-Settings > About shows the version, build (git hash and date), platform, git version, links and credits. The version comes from `Cargo.toml`. The binary is named `OnayGit`.
+---
 
-## Commit pictures and co-authors
-
-History rows show the author and any `Co-authored-by` people with round profile pictures. Pictures come from the GitHub CLI (`gh`), GitHub noreply emails, or Gravatar, and are cached in `~/.onaygit_avatars`. Missing ones show an initial.
-
-The people icon in the commit box lets you choose co-authors for the next commit. Choices are saved in `~/.onaygit_coauthors`. Co-authors already seen in the history are offered too.
+<div align="center"><sub>Made by Tisobyn. Inspired by GitHub Desktop and 1git.</sub></div>
