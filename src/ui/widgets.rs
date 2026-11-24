@@ -42,17 +42,17 @@ pub fn rail_label(ui: &mut egui::Ui, text: &str, p: &Pal) {
 }
 
 pub fn rail_item(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &Pal) -> egui::Response {
-    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 34.0), Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 29.0), Sense::click());
     if selected || resp.hovered() {
         ui.painter().rect_filled(rect, 6.0, p.hover);
     }
-    let icon_rect = egui::Rect::from_center_size(rect.min + egui::vec2(20.0, 17.0), egui::vec2(18.0, 18.0));
+    let icon_rect = egui::Rect::from_center_size(rect.min + egui::vec2(16.0, 14.5), egui::vec2(15.0, 15.0));
     paint_icon(ui, icon, icon_rect, p.muted);
     ui.painter().text(
-        rect.min + egui::vec2(42.0, 17.0),
+        rect.min + egui::vec2(36.0, 14.5),
         Align2::LEFT_CENTER,
         text,
-        FontId::proportional(14.0),
+        FontId::proportional(13.5),
         p.text,
     );
     resp

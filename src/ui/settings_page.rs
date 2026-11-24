@@ -13,11 +13,12 @@ impl App {
     pub fn settings_screen(&mut self, ctx: &egui::Context) {
         let p = self.pal();
         egui::SidePanel::left("settings_rail")
-            .exact_width(260.0)
+            .exact_width(190.0)
             .resizable(false)
             .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 16.0, right: 12.0, top: 24.0, bottom: 16.0 }))
             .show(ctx, |ui| {
-                rail_label(ui, "APPLICATION", &p);
+                ui.spacing_mut().item_spacing.y = 2.0;
+                rail_label(ui, "Application", &p);
                 for (s, icon, name) in [
                     (Section::Application, "settings", "Application"),
                     (Section::Spaces, "layers", "Spaces"),
@@ -35,7 +36,7 @@ impl App {
                     }
                 }
                 ui.add_space(14.0);
-                rail_label(ui, "REPOSITORY", &p);
+                rail_label(ui, "Repository", &p);
                 for (s, icon, name) in [
                     (Section::Remotes, "network", "Remotes"),
                     (Section::RepoStyle, "palette", "Appearance"),
@@ -64,10 +65,10 @@ impl App {
         }
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 28.0, right: 32.0, top: 24.0, bottom: 20.0 }))
+            .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 24.0, right: 32.0, top: 20.0, bottom: 20.0 }))
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                    ui.set_max_width(680.0);
+                    ui.set_max_width(460.0);
                     match self.section {
                         Section::Application => self.application_page(ui, &p),
                         Section::Spaces => self.spaces_page(ui, &p),
@@ -357,7 +358,7 @@ impl App {
 
     fn accounts_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
         let mut add = false;
-        page_header(ui, p, "Accounts", "Connect GitHub or GitLab to publish and open pull requests.", |ui| {
+        page_header(ui, p, "Accounts", "Connected hosting accounts.", |ui| {
             if ui.button("Add account").clicked() {
                 add = true;
             }
@@ -366,7 +367,7 @@ impl App {
             self.acct_adding = true;
         }
         let mut out: Option<usize> = None;
-        let count = format!("{}", self.accounts.len());
+        let count = format!("{} account{}", self.accounts.len(), if self.accounts.len() == 1 { "" } else { "s" });
         settings_group(ui, p, "Connected accounts", &count, |_| {}, |ui| {
             if self.accounts.is_empty() {
                 group_row(ui, p, |ui| {
@@ -379,10 +380,12 @@ impl App {
                         icon(ui, if a.provider == git::Provider::GitHub { "github" } else { "gitlab" }, 18.0, p.text);
                         ui.vertical(|ui| {
                             ui.label(RichText::new(&a.user).color(p.text));
-                            ui.label(RichText::new(&a.host).size(12.0).color(p.muted));
+                            ui.label(RichText::new(format!("{} \u{b7} Connected", a.host)).size(12.0).color(p.muted));
                         });
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button("Sign out").clicked() {
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), Sense::click());
+                            paint_icon(ui, "remove", rect.shrink(3.0), Color32::from_rgb(220, 90, 90));
+                            if resp.on_hover_text("Sign out").clicked() {
                                 out = Some(i);
                             }
                         });
