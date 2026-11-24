@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
+use crate::app::{CODE_FONTS, UI_FONTS};
 use crate::app::spaces::{space_icon_name, SPACE_COLORS, SPACE_ICONS};
 
 impl App {
@@ -25,7 +26,6 @@ impl App {
                     (Section::Spaces, "layers", "Spaces"),
                     (Section::Appearance, "contrast", "Appearance"),
                     (Section::Keybinds, "keyboard", "Keybinds"),
-                    (Section::Privacy, "shield", "Privacy"),
                     (Section::Accounts, "userCircle", "Accounts"),
                     (Section::Git, "branch", "Git"),
                     (Section::Editor, "pencil", "External editor"),
@@ -378,6 +378,94 @@ impl App {
                 });
             });
         });
+        let mut reset = false;
+        settings_group(ui, p, "Text", "", |ui| {
+            if ui.button("Reset").clicked() {
+                reset = true;
+            }
+        }, |ui| {
+            group_row(ui, p, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Font size").size(13.5).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(RichText::new(format!("{:.0} pt", self.settings.diff_font)).size(12.5).color(p.muted));
+                        ui.add(egui::Slider::new(&mut self.settings.diff_font, 10.0..=18.0).show_value(false));
+                    });
+                });
+            });
+            group_row(ui, p, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Interface font").size(13.5).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        egui::ComboBox::from_id_salt("ui_font").width(170.0).selected_text(self.settings.ui_font.clone()).show_ui(ui, |ui| {
+                            for (n, path) in UI_FONTS {
+                                if path.is_empty() || std::path::Path::new(path).exists() {
+                                    ui.selectable_value(&mut self.settings.ui_font, n.to_string(), n);
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+            group_row(ui, p, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Code font").size(13.5).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        egui::ComboBox::from_id_salt("code_font").width(170.0).selected_text(self.settings.code_font.clone()).show_ui(ui, |ui| {
+                            for (n, path) in CODE_FONTS {
+                                if std::path::Path::new(path).exists() {
+                                    ui.selectable_value(&mut self.settings.code_font, n.to_string(), n);
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+            group_row(ui, p, |ui| {
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Interface zoom").size(13.5).color(p.text));
+                        ui.label(RichText::new("Scale the whole app.").size(12.0).color(p.muted));
+                    });
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let r = ui.add(egui::Slider::new(&mut self.settings.zoom, 0.8..=1.5));
+                        if r.drag_stopped() || (r.changed() && !r.dragged()) {
+                            ctx.set_zoom_factor(self.settings.zoom);
+                        }
+                    });
+                });
+            });
+        });
+        if reset {
+            self.settings.diff_font = 12.0;
+            self.settings.ui_font = "System font".into();
+            self.settings.code_font = "Menlo".into();
+            self.settings.zoom = 1.0;
+            ctx.set_zoom_factor(1.0);
+        }
+        settings_group(ui, p, "Grain texture", "", |_| {}, |ui| {
+            group_row(ui, p, |ui| {
+                toggle_row(ui, p, "Show grain", "Add a subtle noise texture to window chrome.", &mut self.settings.grain);
+            });
+            for (label, which) in [("Pattern", 0), ("Strength", 1)] {
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(label).size(13.5).color(p.text));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let names: [&str; 3] = if which == 0 { ["Fine", "Classic", "Coarse"] } else { ["Subtle", "Balanced", "Strong"] };
+                            let cur = if which == 0 { &mut self.settings.grain_pattern } else { &mut self.settings.grain_strength };
+                            ui.add_enabled_ui(self.settings.grain, |ui| {
+                                egui::ComboBox::from_id_salt(label).width(170.0).selected_text(names[*cur]).show_ui(ui, |ui| {
+                                    for (i, n) in names.iter().enumerate() {
+                                        ui.selectable_value(cur, i, *n);
+                                    }
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+        });
         settings_group(ui, p, "Interface", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
                 toggle_row(ui, p, "Pane scrollbars", "Show scrollbars in lists, previews and output panes.", &mut self.settings.scrollbars);
@@ -406,31 +494,9 @@ impl App {
                 });
             });
         });
-        settings_group(ui, p, "Text", "", |_| {}, |ui| {
+        settings_group(ui, p, "Commit messages", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(RichText::new("Font size").size(13.5).color(p.text));
-                        ui.label(RichText::new("Text size in the diff view.").size(12.0).color(p.muted));
-                    });
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.add(egui::Slider::new(&mut self.settings.diff_font, 10.0..=18.0));
-                    });
-                });
-            });
-            group_row(ui, p, |ui| {
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(RichText::new("Interface zoom").size(13.5).color(p.text));
-                        ui.label(RichText::new("Scale the whole app.").size(12.0).color(p.muted));
-                    });
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let r = ui.add(egui::Slider::new(&mut self.settings.zoom, 0.8..=1.5));
-                        if r.drag_stopped() || (r.changed() && !r.dragged()) {
-                            ctx.set_zoom_factor(self.settings.zoom);
-                        }
-                    });
-                });
+                toggle_row(ui, p, "Commit type badges", "Compact labels for feat, fix, refactor and other conventional prefixes. Original messages are unchanged.", &mut self.settings.commit_badges);
             });
         });
     }
@@ -646,7 +712,7 @@ impl App {
         });
     }
 
-    fn load_repo_identity(&mut self) {
+    pub fn load_repo_identity(&mut self) {
         let Some(repo) = self.repo() else { return };
         let get = |k: &str| git::run(&repo, &["config", "--local", k]).map(|s| s.trim().to_string()).unwrap_or_default();
         self.repo_name_cfg = get("user.name");
@@ -953,7 +1019,8 @@ fn appearance_preview(ui: &mut egui::Ui, p: &Pal) {
             for (tag, msg) in [("feat", "(core) add workspace shortcuts"), ("refactor", "(db) simplify queries"), ("", "Update the getting started guide")] {
                 ui.horizontal(|ui| {
                     if !tag.is_empty() {
-                        ui.label(RichText::new(tag).size(11.0).color(p.muted).background_color(p.hover));
+                        let c = crate::ui::history::badge_color(tag);
+                        ui.label(RichText::new(tag).size(11.0).color(p.text).background_color(c.gamma_multiply(0.18)));
                     }
                     ui.label(RichText::new(msg).size(12.5).color(p.text));
                 });

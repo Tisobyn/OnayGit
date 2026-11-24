@@ -171,6 +171,10 @@ pub struct App {
     pub acct_cli: bool,
     pub launcher_msg: String,
     pub keybind_search: String,
+    pub fonts_applied: (String, String),
+    pub grain_tex: Option<egui::TextureHandle>,
+    /// Open rail menu: kind (0 settings, 1 spaces, 2 account), anchor and the frame it opened in.
+    pub rail_menu: Option<(u8, egui::Pos2, f64)>,
     pub keybinds: HashMap<String, String>,
     pub recording: Option<&'static str>,
     pub keybind_msg: String,
@@ -231,18 +235,11 @@ pub struct App {
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let settings = Settings::load();
+        let fonts_applied = (settings.ui_font.clone(), settings.code_font.clone());
         egui_extras::install_image_loaders(&cc.egui_ctx);
         set_accent(settings.accent);
         apply_visuals(&cc.egui_ctx, settings.theme);
-        // Key symbols and arrows are missing from the default font; borrow them from macOS.
-        if let Ok(bytes) = std::fs::read("/System/Library/Fonts/Apple Symbols.ttf") {
-            let mut fonts = egui::FontDefinitions::default();
-            fonts.font_data.insert("symbols".into(), egui::FontData::from_owned(bytes));
-            for fam in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
-                fonts.families.entry(fam).or_default().push("symbols".into());
-            }
-            cc.egui_ctx.set_fonts(fonts);
-        }
+        apply_fonts(&cc.egui_ctx, &settings.ui_font, &settings.code_font);
         cc.egui_ctx.set_zoom_factor(settings.zoom);
 
         let (tx, rx) = channel();
@@ -327,6 +324,9 @@ impl App {
             acct_cli: false,
             launcher_msg: String::new(),
             keybind_search: String::new(),
+            fonts_applied,
+            grain_tex: None,
+            rail_menu: None,
             keybinds: crate::keybinds::load(),
             recording: None,
             keybind_msg: String::new(),
@@ -504,6 +504,10 @@ impl eframe::App for App {
         }
         set_accent(self.settings.accent);
         apply_visuals(ctx, self.theme_now());
+        if self.fonts_applied != (self.settings.ui_font.clone(), self.settings.code_font.clone()) {
+            apply_fonts(ctx, &self.settings.ui_font, &self.settings.code_font);
+            self.fonts_applied = (self.settings.ui_font.clone(), self.settings.code_font.clone());
+        }
         ctx.style_mut(|st| {
             st.animation_time = if self.settings.smooth { 1.0 / 12.0 } else { 0.0 };
             if !self.settings.scrollbars {
@@ -581,9 +585,52 @@ impl eframe::App for App {
         }
 
         self.paint_corners(ctx);
+        self.paint_grain(ctx);
 
         if self.settings != before {
             self.settings.save();
         }
     }
+}
+
+/// Fonts offered in Settings, with the file each one is loaded from.
+pub const UI_FONTS: [(&str, &str); 6] = [
+    ("System font", ""),
+    ("Helvetica Neue", "/System/Library/Fonts/HelveticaNeue.ttc"),
+    ("Helvetica", "/System/Library/Fonts/Helvetica.ttc"),
+    ("Arial", "/System/Library/Fonts/Supplemental/Arial.ttf"),
+    ("Verdana", "/System/Library/Fonts/Supplemental/Verdana.ttf"),
+    ("Georgia", "/System/Library/Fonts/Supplemental/Georgia.ttf"),
+];
+
+pub const CODE_FONTS: [(&str, &str); 4] = [
+    ("Menlo", "/System/Library/Fonts/Menlo.ttc"),
+    ("Monaco", "/System/Library/Fonts/Monaco.ttf"),
+    ("Courier New", "/System/Library/Fonts/Supplemental/Courier New.ttf"),
+    ("Andale Mono", "/System/Library/Fonts/Supplemental/Andale Mono.ttf"),
+];
+
+/// Install the chosen interface and code fonts, with macOS symbols as a fallback for key glyphs.
+pub fn apply_fonts(ctx: &egui::Context, ui_font: &str, code_font: &str) {
+    let mut fonts = egui::FontDefinitions::default();
+    let mut add = |name: &str, path: &str, fams: &[(egui::FontFamily, bool)]| {
+        let Ok(bytes) = std::fs::read(path) else { return };
+        fonts.font_data.insert(name.to_string(), egui::FontData::from_owned(bytes));
+        for (fam, first) in fams {
+            let list = fonts.families.entry(fam.clone()).or_default();
+            if *first {
+                list.insert(0, name.to_string());
+            } else {
+                list.push(name.to_string());
+            }
+        }
+    };
+    if let Some((_, path)) = UI_FONTS.iter().find(|(n, p)| *n == ui_font && !p.is_empty()) {
+        add("ui_font", path, &[(egui::FontFamily::Proportional, true)]);
+    }
+    if let Some((_, path)) = CODE_FONTS.iter().find(|(n, _)| *n == code_font) {
+        add("code_font", path, &[(egui::FontFamily::Monospace, true)]);
+    }
+    add("symbols", "/System/Library/Fonts/Apple Symbols.ttf", &[(egui::FontFamily::Proportional, false), (egui::FontFamily::Monospace, false)]);
+    ctx.set_fonts(fonts);
 }

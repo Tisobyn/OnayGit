@@ -177,7 +177,18 @@ impl App {
                 let x = rect.min.x + if needs_graph { graph_w + 2.0 } else { 16.0 };
                 let right = if !comparing && i < unpushed { 36.0 } else { 12.0 };
                 let clip = ui.painter().with_clip_rect(egui::Rect::from_min_max(rect.min, egui::pos2(rect.max.x - right, rect.max.y)));
-                clip.text(egui::pos2(x, rect.min.y + 18.0), Align2::LEFT_CENTER, &c.subject, FontId::proportional(13.5), p.text);
+                match self.settings.commit_badges.then(|| split_conventional(&c.subject)).flatten() {
+                    Some((kind, rest)) => {
+                        let galley = ui.painter().layout_no_wrap(kind.to_string(), FontId::proportional(11.0), badge_color(kind));
+                        let br = egui::Rect::from_min_size(egui::pos2(x, rect.min.y + 9.0), galley.size() + egui::vec2(12.0, 4.0));
+                        clip.rect_filled(br, 4.0, badge_color(kind).gamma_multiply(0.18));
+                        clip.galley(br.min + egui::vec2(6.0, 2.0), galley, p.text);
+                        clip.text(egui::pos2(br.max.x + 8.0, rect.min.y + 18.0), Align2::LEFT_CENTER, rest, FontId::proportional(13.5), p.text);
+                    }
+                    None => {
+                        clip.text(egui::pos2(x, rect.min.y + 18.0), Align2::LEFT_CENTER, &c.subject, FontId::proportional(13.5), p.text);
+                    }
+                }
                 let short: String = c.hash.chars().take(7).collect();
                 clip.text(egui::pos2(x, rect.min.y + 37.0), Align2::LEFT_CENTER, format!("{} \u{b7} {} \u{b7} {short}", c.author, c.when), FontId::proportional(11.5), p.muted);
                 if !comparing && i < unpushed {
@@ -270,5 +281,29 @@ impl App {
         if let Some((a, h)) = action {
             self.commit_action(a, h);
         }
+    }
+}
+
+/// Splits `feat(core): add x` into (`feat`, `(core) add x`).
+pub fn split_conventional(subject: &str) -> Option<(&str, String)> {
+    const KINDS: [&str; 11] = ["feat", "fix", "refactor", "docs", "chore", "test", "perf", "build", "ci", "style", "revert"];
+    let (head, rest) = subject.split_once(": ")?;
+    let head = head.trim_end_matches('!');
+    let (kind, scope) = match head.split_once('(') {
+        Some((k, s)) => (k, Some(s.strip_suffix(')')?)),
+        None => (head, None),
+    };
+    KINDS.contains(&kind).then(|| (kind, match scope { Some(s) => format!("({s}) {rest}"), None => rest.to_string() }))
+}
+
+pub fn badge_color(kind: &str) -> Color32 {
+    match kind {
+        "feat" => Color32::from_rgb(98, 174, 134),
+        "fix" => Color32::from_rgb(232, 121, 130),
+        "refactor" => Color32::from_rgb(164, 120, 239),
+        "docs" => Color32::from_rgb(82, 139, 255),
+        "perf" => Color32::from_rgb(233, 152, 85),
+        "test" => Color32::from_rgb(217, 179, 74),
+        _ => Color32::from_rgb(130, 148, 179),
     }
 }

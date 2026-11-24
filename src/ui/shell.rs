@@ -2,6 +2,8 @@
 //! and a rounded content card.
 #[allow(unused_imports)]
 use crate::prelude::*;
+use crate::app::spaces::space_icon_name;
+use crate::ui::settings_page::space_color32;
 
 const TITLE_H: f32 = 40.0;
 const RAIL_W: f32 = 52.0;
@@ -9,6 +11,10 @@ const GAP: f32 = 8.0;
 const RADIUS: f32 = 12.0;
 
 fn icon_button(ui: &mut egui::Ui, name: &str, tip: &str, selected: bool, p: &Pal) -> egui::Response {
+    icon_button_tint(ui, name, tip, selected, p, if selected { p.text } else { p.muted })
+}
+
+fn icon_button_tint(ui: &mut egui::Ui, name: &str, tip: &str, selected: bool, p: &Pal, tint: Color32) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(36.0, 36.0), Sense::click());
     if selected || resp.hovered() {
         let a = if selected { 8 } else { 4 };
@@ -19,7 +25,7 @@ fn icon_button(ui: &mut egui::Ui, name: &str, tip: &str, selected: bool, p: &Pal
         };
         ui.painter().rect_filled(rect, 8.0, fill);
     }
-    paint_icon(ui, name, rect.shrink(9.0), if selected { p.text } else { p.muted });
+    paint_icon(ui, name, rect.shrink(9.0), tint);
     resp.on_hover_text(tip)
 }
 
@@ -179,6 +185,7 @@ impl App {
         let mut home = false;
         let mut accounts = false;
         let mut prs = false;
+        let mut menu: Option<(u8, egui::Rect)> = None;
         egui::SidePanel::left("rail")
             .exact_width(RAIL_W)
             .resizable(false)
@@ -208,17 +215,37 @@ impl App {
                 }
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                     ui.spacing_mut().item_spacing.y = 6.0;
-                    if icon_button(ui, "github", "Accounts", false, p).clicked() {
-                        accounts = true;
+                    let r = icon_button(ui, "github", "Accounts", false, p);
+                    if r.clicked() {
+                        menu = Some((2, r.rect));
                     }
-                    if icon_button(ui, "settings", "Settings (Cmd+,)", self.screen == Screen::Settings, p).clicked() {
-                        settings = true;
+                    let in_repo = self.screen == Screen::Repo;
+                    let r = icon_button(ui, "settings", if in_repo { "Workspace settings (Cmd+, opens Settings)" } else { "Settings (Cmd+,)" }, self.screen == Screen::Settings, p);
+                    if r.clicked() {
+                        if in_repo {
+                            menu = Some((0, r.rect));
+                        } else {
+                            settings = true;
+                        }
+                    }
+                    let (sicon, scol) = match self.selected_space.and_then(|i| self.spaces.get(i)) {
+                        Some(s) => (space_icon_name(&s.icon), if s.color.is_some() { space_color32(s.color) } else { p.muted }),
+                        None => ("layers".to_string(), p.muted),
+                    };
+                    let r = icon_button_tint(ui, &sicon, "Spaces", false, p, scol);
+                    if r.clicked() {
+                        menu = Some((1, r.rect));
                     }
                     if icon_button(ui, "home", "Repositories", self.screen == Screen::Home, p).clicked() {
                         home = true;
                     }
                 });
             });
+        if let Some((k, r)) = menu {
+            let open = matches!(self.rail_menu, Some((kind, _, _)) if kind == k);
+            self.rail_menu = if open { None } else { Some((k, r.right_bottom() + egui::vec2(6.0, 0.0), ctx.input(|i| i.time))) };
+        }
+        self.rail_menu_ui(ctx, p);
         if let Some(t) = new_tab {
             self.tab = t;
         }
@@ -243,6 +270,49 @@ impl App {
     /// Paint the card background so gaps between panels never show the window frame.
     pub fn fill_card(&self, ctx: &egui::Context) {
         ctx.layer_painter(egui::LayerId::background()).rect_filled(self.card_rect, 0.0, self.pal().bg);
+    }
+
+    /// Fine noise over the window chrome (title bar, rail and margins), never over content.
+    pub fn paint_grain(&mut self, ctx: &egui::Context) {
+        if !self.settings.grain || !self.card_rect.is_positive() {
+            return;
+        }
+        let tex = self
+            .grain_tex
+            .get_or_insert_with(|| {
+                let n = 96usize;
+                let mut seed = 0x2545F491u32;
+                let mut pixels = Vec::with_capacity(n * n);
+                for _ in 0..n * n {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 17;
+                    seed ^= seed << 5;
+                    let v = if seed & 1 == 0 { 0u8 } else { 255u8 };
+                    pixels.push(Color32::from_rgba_unmultiplied(v, v, v, ((seed >> 8) & 0x07) as u8));
+                }
+                let img = egui::ColorImage { size: [n, n], pixels };
+                ctx.load_texture("grain", img, egui::TextureOptions { wrap_mode: egui::TextureWrapMode::Repeat, ..egui::TextureOptions::NEAREST })
+            })
+            .clone();
+        // Tile size in points: finer patterns repeat the texture more often.
+        let tile = [48.0_f32, 96.0, 192.0][self.settings.grain_pattern.min(2)];
+        let op = [0.5_f32, 1.0, 1.5][self.settings.grain_strength.min(2)];
+        let tint = Color32::from_white_alpha((40.0 * op).min(255.0) as u8);
+        let screen = ctx.screen_rect();
+        let card = self.card_rect;
+        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Background, egui::Id::new("grain")));
+        let strips = [
+            egui::Rect::from_min_max(screen.min, egui::pos2(screen.max.x, card.min.y)),
+            egui::Rect::from_min_max(egui::pos2(screen.min.x, card.min.y), egui::pos2(card.min.x, card.max.y)),
+            egui::Rect::from_min_max(egui::pos2(card.max.x, card.min.y), egui::pos2(screen.max.x, card.max.y)),
+            egui::Rect::from_min_max(egui::pos2(screen.min.x, card.max.y), screen.max),
+        ];
+        for r in strips {
+            if r.is_positive() {
+                let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(r.width() / tile, r.height() / tile));
+                painter.image(tex.id(), r, uv, tint);
+            }
+        }
     }
 
     /// Round the corners of the content card by painting the outside corners in the frame color.
@@ -272,6 +342,144 @@ impl App {
                 mesh.add_triangle(0, i as u32, i as u32 + 1);
             }
             painter.add(egui::Shape::mesh(mesh));
+        }
+    }
+}
+
+impl App {
+    /// Menu that opens beside a rail button: settings shortcuts, spaces or accounts.
+    fn rail_menu_ui(&mut self, ctx: &egui::Context, p: &Pal) {
+        let Some((kind, pos, opened)) = self.rail_menu else { return };
+        // (label, checked, enabled); an empty label is a separator.
+        let mut items: Vec<(String, bool, bool)> = vec![];
+        let sep = || (String::new(), false, false);
+        match kind {
+            0 => {
+                for l in ["Appearance...", "Accounts...", "Spaces...", "AI...", "Help..."] {
+                    items.push((l.into(), false, true));
+                }
+                items.push(sep());
+                for l in ["Customize appearance...", "Remotes...", "Commit identity...", "Ignored file history..."] {
+                    items.push((l.into(), false, true));
+                }
+                items.push(sep());
+                items.push(("All Settings...".into(), false, true));
+            }
+            1 => {
+                items.push(("All repositories".into(), self.selected_space.is_none(), true));
+                for (i, s) in self.spaces.iter().enumerate() {
+                    items.push((s.name.clone(), self.selected_space == Some(i), true));
+                }
+                items.push(sep());
+                items.push(("New space...".into(), false, true));
+                items.push(("Manage spaces...".into(), false, true));
+            }
+            _ => {
+                if self.accounts.is_empty() {
+                    items.push(("No accounts connected".into(), false, false));
+                }
+                for (i, a) in self.accounts.iter().enumerate() {
+                    let prov = if a.host.contains("gitlab") { "GitLab" } else { "GitHub" };
+                    items.push((format!("{} \u{b7} {prov} ({})", a.user, a.host), i == self.publish_account, true));
+                }
+                items.push(sep());
+                items.push(("Add account...".into(), false, true));
+                items.push(("Manage accounts...".into(), false, true));
+            }
+        }
+        let mut chosen: Option<usize> = None;
+        let area = egui::Area::new(egui::Id::new("rail_menu"))
+            .order(egui::Order::Foreground)
+            .pivot(Align2::LEFT_BOTTOM)
+            .fixed_pos(pos)
+            .show(ctx, |ui| {
+                egui::Frame::none()
+                    .fill(p.bg)
+                    .stroke(egui::Stroke::new(1.0_f32, p.border))
+                    .rounding(10.0)
+                    .shadow(egui::epaint::Shadow { offset: egui::vec2(0.0, 6.0), blur: 18.0, spread: 0.0, color: Color32::from_black_alpha(70) })
+                    .inner_margin(egui::Margin::same(6.0))
+                    .show(ui, |ui| {
+                        ui.set_width(220.0);
+                        ui.spacing_mut().item_spacing.y = 0.0;
+                        for (i, (label, checked, enabled)) in items.iter().enumerate() {
+                            if label.is_empty() {
+                                ui.add_space(4.0);
+                                let (r, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 1.0), Sense::hover());
+                                ui.painter().rect_filled(r, 0.0, p.border);
+                                ui.add_space(4.0);
+                                continue;
+                            }
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 30.0), Sense::click());
+                            if *enabled && resp.hovered() {
+                                ui.painter().rect_filled(rect, 6.0, p.hover);
+                            }
+                            let col = if *enabled { p.text } else { p.muted };
+                            if *checked {
+                                paint_icon(ui, "check", egui::Rect::from_center_size(rect.left_center() + egui::vec2(14.0, 0.0), egui::vec2(14.0, 14.0)), col);
+                            }
+                            ui.painter().text(rect.left_center() + egui::vec2(28.0, 0.0), Align2::LEFT_CENTER, label, FontId::proportional(13.5), col);
+                            if *enabled && resp.clicked() {
+                                chosen = Some(i);
+                            }
+                        }
+                    });
+            });
+        let clicked_out = ctx.input(|i| i.pointer.any_click()) && ctx.input(|i| i.time) - opened > 0.15 && !area.response.hovered() && !ctx.is_pointer_over_area();
+        let esc = ctx.input(|i| i.key_pressed(egui::Key::Escape));
+        if chosen.is_some() || clicked_out || esc {
+            self.rail_menu = None;
+        }
+        let Some(i) = chosen else { return };
+        let label = items[i].0.clone();
+        let open = |app: &mut App, s: Section| {
+            app.open_settings();
+            app.section = s;
+        };
+        match (kind, label.as_str()) {
+            (0, "Appearance...") => open(self, Section::Appearance),
+            (0, "Accounts...") => open(self, Section::Accounts),
+            (0, "Spaces...") => open(self, Section::Spaces),
+            (0, "AI...") => open(self, Section::Ai),
+            (0, "Help...") => open(self, Section::Help),
+            (0, "Customize appearance...") => open(self, Section::RepoStyle),
+            (0, "Remotes...") => open(self, Section::Remotes),
+            (0, "Commit identity...") => {
+                open(self, Section::Identity);
+                self.load_repo_identity();
+            }
+            (0, "Ignored file history...") => {
+                open(self, Section::Ignore);
+                self.ignore_text = self.repo().map(|r| git::read_ignore(&r)).unwrap_or_default();
+            }
+            (0, _) => self.open_settings(),
+            (1, "All repositories") => {
+                self.selected_space = None;
+                self.screen = Screen::Home;
+            }
+            (1, "New space...") => {
+                open(self, Section::Spaces);
+                self.space_name.clear();
+                self.space_icon = "layers".into();
+                self.space_color = None;
+                self.space_dialog = Some(None);
+            }
+            (1, "Manage spaces...") => open(self, Section::Spaces),
+            (1, _) => {
+                if let Some(k) = self.spaces.iter().position(|s| s.name == label) {
+                    self.selected_space = Some(k);
+                    self.screen = Screen::Home;
+                }
+            }
+            (_, "Add account...") => {
+                open(self, Section::Accounts);
+                self.acct_adding = true;
+            }
+            (_, "Manage accounts...") => open(self, Section::Accounts),
+            _ => {
+                // An account row: remember it as the default for publishing.
+                self.publish_account = i.min(self.accounts.len().saturating_sub(1));
+            }
         }
     }
 }
