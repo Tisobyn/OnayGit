@@ -272,11 +272,11 @@ pub fn badge_color(kind: &str) -> Color32 {
 }
 
 impl App {
-    /// Column on the right with the changed files of the selected commit.
+    /// Column between the history list and the diff with the changed files of the selected commit.
     pub fn commit_files_column(&mut self, ctx: &egui::Context) {
         let p = self.pal();
         let mut pick_file: Option<Option<String>> = None;
-        egui::SidePanel::right("commit_files_col")
+        egui::SidePanel::left("commit_files_col")
             .resizable(true)
             .default_width(280.0)
             .width_range(200.0..=520.0)
