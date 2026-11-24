@@ -11,6 +11,7 @@ impl App {
         let mut mode: Option<bool> = None;
         let mut events: Vec<DiffEvent> = Vec::new();
         let mut restore_ignored = false;
+        let mut show_all: Option<usize> = None;
         if self.tab == Tab::Graph {
             self.graph_main(ctx);
             return;
@@ -34,6 +35,22 @@ impl App {
             } else {
                 &self.commit_diff
             };
+
+            // Very long diffs are cut so the window stays fast.
+            const CAP: usize = 4000;
+            let total = lines.len();
+            let too_big = total > CAP && self.show_big_diff != total;
+            let lines = if too_big { &lines[..CAP] } else { lines };
+            if too_big {
+                egui::Frame::none().fill(p.hover).inner_margin(egui::Margin::symmetric(14.0, 6.0)).show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(format!("Large diff: showing the first {CAP} of {total} lines.")).size(12.5).color(p.muted));
+                        if ui.small_button("Show all").clicked() {
+                            show_all = Some(total);
+                        }
+                    });
+                });
+            }
 
             if stash_view {
                 egui::Frame::none().inner_margin(egui::Margin::symmetric(10.0, 6.0)).show(ui, |ui| {
@@ -213,6 +230,9 @@ impl App {
             }
         });
 
+        if let Some(n) = show_all {
+            self.show_big_diff = n;
+        }
         if restore_ignored {
             self.ignored_restore();
         }

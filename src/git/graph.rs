@@ -95,10 +95,9 @@ pub fn ref_list(repo: &Path) -> Vec<(String, u8, String)> {
                     return None;
                 }
                 (2, n)
-            } else if let Some(n) = full.strip_prefix("refs/tags/") {
-                (3, n)
             } else {
-                return None;
+                let n = full.strip_prefix("refs/tags/")?;
+                (3, n)
             };
             Some((name.to_string(), kind, hash))
         })

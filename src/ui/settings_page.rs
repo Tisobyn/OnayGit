@@ -528,7 +528,7 @@ impl App {
             }
         });
         ui.add_space(4.0);
-        framed(ui, &p, egui::TextEdit::singleline(&mut self.keybind_search).hint_text("Find an action or shortcut...").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+        framed(ui, p, egui::TextEdit::singleline(&mut self.keybind_search).hint_text("Find an action or shortcut...").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
         ui.add_space(14.0);
         // Record a new shortcut for the chosen command.
         if let Some(id) = self.recording {
@@ -678,10 +678,10 @@ impl App {
         ui.add_space(8.0);
         if self.git_src.is_none() {
             ui.label(RichText::new("Name").size(13.0).color(p.text));
-            framed(ui, &p, egui::TextEdit::singleline(&mut self.git_name).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+            framed(ui, p, egui::TextEdit::singleline(&mut self.git_name).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
             ui.add_space(8.0);
             ui.label(RichText::new("Commit email").size(13.0).color(p.text));
-            framed(ui, &p, egui::TextEdit::singleline(&mut self.git_email).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+            framed(ui, p, egui::TextEdit::singleline(&mut self.git_email).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
         } else {
             ui.label(RichText::new(format!("{} <{}>", self.git_name, self.git_email)).size(12.5).color(p.muted));
         }
@@ -805,7 +805,7 @@ impl App {
         ui.label(RichText::new(if target.is_some() { "Edit file type default" } else { "Add file type default" }).size(14.0).color(p.text));
         ui.add_space(14.0);
         ui.label(RichText::new("File types or names").size(13.0).color(p.text));
-        framed(ui, &p, egui::TextEdit::singleline(&mut self.rule_patterns).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+        framed(ui, p, egui::TextEdit::singleline(&mut self.rule_patterns).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
         ui.add_space(4.0);
         ui.label(RichText::new(".ts, .tsx, Dockerfile").size(12.5).color(p.muted));
         ui.add_space(12.0);
@@ -1041,7 +1041,7 @@ impl App {
                         ui.label(RichText::new(if gh { "Enable Device Flow, then register the application." } else { "Enable the device flow scope, then save the application." }).size(12.0).color(p.muted));
                         ui.add_space(6.0);
                         ui.label(RichText::new("Client ID").size(13.0).color(p.text));
-                        framed(ui, &p, egui::TextEdit::singleline(&mut self.acct_client_id).hint_text("Client ID").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+                        framed(ui, p, egui::TextEdit::singleline(&mut self.acct_client_id).hint_text("Client ID").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
                         ui.label(RichText::new("Use the public ID, not the client secret.").size(12.0).color(p.muted));
                     }
                 }
@@ -1069,7 +1069,7 @@ impl App {
                     );
                     ui.add_space(6.0);
                     ui.label(RichText::new("Access token").size(13.0).color(p.text));
-                    framed(ui, &p, egui::TextEdit::singleline(&mut self.acct_token).password(true).hint_text("Paste an access token").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+                    framed(ui, p, egui::TextEdit::singleline(&mut self.acct_token).password(true).hint_text("Paste an access token").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
                     ui.label(RichText::new("Stored securely in macOS Keychain.").size(12.0).color(p.muted));
                 }
                 _ => {
@@ -1086,7 +1086,7 @@ impl App {
             let open = self.acct_advanced || !self.acct_host.is_empty();
             egui::CollapsingHeader::new("Advanced").default_open(open).show(ui, |ui| {
                 ui.label(RichText::new("Host").size(12.5).color(p.text));
-                framed(ui, &p, egui::TextEdit::singleline(&mut self.acct_host).hint_text(self.acct_provider.default_host()).desired_width(f32::INFINITY));
+                framed(ui, p, egui::TextEdit::singleline(&mut self.acct_host).hint_text(self.acct_provider.default_host()).desired_width(f32::INFINITY));
                 ui.label(RichText::new("Change this for GitHub Enterprise or a self-hosted GitLab.").size(12.0).color(p.muted));
             });
             if !self.status_msg.is_empty() {

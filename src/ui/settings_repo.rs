@@ -23,7 +23,7 @@ impl App {
             ui.horizontal(|ui| {
                 match &mut self.remote_rename {
                     Some((old, text)) if *old == r.name => {
-                        framed(ui, &p, egui::TextEdit::singleline(text).desired_width(120.0));
+                        framed(ui, p, egui::TextEdit::singleline(text).desired_width(120.0));
                         if ui.small_button("OK").clicked() {
                             rename = Some((old.clone(), text.clone()));
                         }
@@ -37,7 +37,7 @@ impl App {
                 }
                 match &mut self.remote_edit {
                     Some((name, url)) if *name == r.name => {
-                        framed(ui, &p, egui::TextEdit::singleline(url).desired_width(260.0));
+                        framed(ui, p, egui::TextEdit::singleline(url).desired_width(260.0));
                         if ui.small_button("Save").clicked() {
                             save_url = Some((name.clone(), url.clone()));
                         }
@@ -77,8 +77,8 @@ impl App {
 
         ui.add_space(10.0);
         ui.label(RichText::new("Add remote").color(p.muted));
-        framed(ui, &p, egui::TextEdit::singleline(&mut self.new_remote_name).hint_text("Name, for example origin").desired_width(f32::INFINITY));
-        framed(ui, &p, egui::TextEdit::singleline(&mut self.new_remote_url).hint_text("URL").desired_width(f32::INFINITY));
+        framed(ui, p, egui::TextEdit::singleline(&mut self.new_remote_name).hint_text("Name, for example origin").desired_width(f32::INFINITY));
+        framed(ui, p, egui::TextEdit::singleline(&mut self.new_remote_url).hint_text("URL").desired_width(f32::INFINITY));
         ui.add_space(6.0);
         let ok = !self.new_remote_name.trim().is_empty() && !self.new_remote_url.trim().is_empty();
         if ui.add_enabled(ok, egui::Button::new("Add remote")).clicked() {

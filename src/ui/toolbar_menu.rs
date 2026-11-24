@@ -59,6 +59,7 @@ impl App {
         let mut merge_into: Option<String> = None;
         let mut new_branch = false;
         let mut open_prs = false;
+        let mut load_prs = false;
         let mut add: Option<u8> = None;
         let mut close = false;
         let mut ask: Option<Confirm> = None;
@@ -121,7 +122,7 @@ impl App {
                                     None => owners.push((o, vec![i])),
                                 }
                             }
-                            owners.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+                            owners.sort_by_key(|a| a.0.to_lowercase());
                             groups.extend(owners);
                             egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                                 for (title, list) in &groups {
@@ -170,16 +171,46 @@ impl App {
                                     }
                                     if resp.clicked() {
                                         self.branch_tab = k as u8;
+                                        if k == 1 {
+                                            load_prs = true;
+                                        }
                                     }
                                 }
                             });
                             ui.separator();
                             if self.branch_tab == 1 {
-                                ui.add_space(30.0);
-                                ui.vertical_centered(|ui| {
-                                    ui.label(RichText::new("Pull requests of this repository").color(p.muted));
-                                    ui.add_space(8.0);
-                                    if ui.button("Open pull requests").clicked() {
+                                ui.add_space(10.0);
+                                egui::ScrollArea::vertical().max_height((ui.available_height() - 56.0).max(40.0)).auto_shrink([false, false]).show(ui, |ui| {
+                                    ui.spacing_mut().item_spacing.y = 0.0;
+                                    if !self.pr_error.is_empty() {
+                                        ui.add_space(16.0);
+                                        ui.horizontal_wrapped(|ui| {
+                                            ui.add_space(14.0);
+                                            ui.label(RichText::new(&self.pr_error).size(12.5).color(p.muted));
+                                        });
+                                    } else if self.prs.is_empty() {
+                                        ui.add_space(24.0);
+                                        ui.vertical_centered(|ui| ui.label(RichText::new(if self.task_running(crate::app::tasks::T_PRS) { "Loading..." } else { "No open pull requests" }).color(p.muted)));
+                                    }
+                                    for pr in &self.prs {
+                                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 46.0), Sense::click());
+                                        if resp.hovered() {
+                                            ui.painter().rect_filled(rect, 0.0, p.hover);
+                                        }
+                                        let clip = ui.painter().with_clip_rect(rect.shrink2(egui::vec2(10.0, 0.0)));
+                                        clip.text(rect.min + egui::vec2(14.0, 16.0), Align2::LEFT_CENTER, format!("#{} {}", pr.number, pr.title), FontId::proportional(13.5), p.text);
+                                        clip.text(rect.min + egui::vec2(14.0, 33.0), Align2::LEFT_CENTER, format!("{} \u{2192} {} by {}", pr.head, pr.base, pr.author), FontId::proportional(11.5), p.muted);
+                                        if resp.clicked() {
+                                            open_url(&pr.url);
+                                        }
+                                    }
+                                });
+                                ui.separator();
+                                ui.add_space(10.0);
+                                ui.horizontal(|ui| {
+                                    ui.add_space(14.0);
+                                    let bw = (ui.available_width() - 14.0).max(40.0);
+                                    if ui.add(egui::Button::new(RichText::new("New pull request...").strong()).min_size(egui::vec2(bw, 30.0))).clicked() {
                                         open_prs = true;
                                     }
                                 });
@@ -364,6 +395,9 @@ impl App {
                 self.refresh();
             }
             close = true;
+        }
+        if load_prs {
+            self.load_prs(ctx);
         }
         if open_prs {
             self.open_pull_requests(ctx);

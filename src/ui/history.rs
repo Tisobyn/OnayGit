@@ -61,7 +61,7 @@ impl App {
         if self.filter_open {
             ui.horizontal(|ui| {
                 ui.add_space(10.0);
-                let r = framed(ui, &p, egui::TextEdit::singleline(&mut self.filter).hint_text("Filter commits").desired_width(ui.available_width() - 10.0));
+                let r = framed(ui, p, egui::TextEdit::singleline(&mut self.filter).hint_text("Filter commits").desired_width(ui.available_width() - 10.0));
                 if self.focus_filter {
                     r.request_focus();
                     self.focus_filter = false;
@@ -112,10 +112,11 @@ impl App {
             }
         }
         let mut want: Vec<(String, Option<String>)> = vec![];
+        let mut more = false;
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
             for (i, c) in list.iter().enumerate() {
-                if !q.is_empty() && !(c.subject.to_lowercase().contains(&q) || c.author.to_lowercase().contains(&q) || c.hash.starts_with(&q)) {
+                if !q.is_empty() && !(c.subject.to_lowercase().contains(&q) || c.author.to_lowercase().contains(&q) || c.hash.starts_with(&q) || c.coauthors.iter().any(|p| p.name.to_lowercase().contains(&q))) {
                     continue;
                 }
                 let sel = self.selected_commit.as_deref() == Some(c.hash.as_str());
@@ -150,7 +151,7 @@ impl App {
                         want.push((person.email.clone(), (n == 0).then(|| c.hash.clone())));
                     }
                 }
-                let aw = paint_avatars(ui, &p, egui::pos2(x, rect.min.y + 37.0), &people, &self.avatars, 16.0);
+                let aw = paint_avatars(ui, p, egui::pos2(x, rect.min.y + 37.0), &people, &self.avatars, 16.0);
                 clip.text(egui::pos2(x + aw + 6.0, rect.min.y + 37.0), Align2::LEFT_CENTER, format!("{} \u{2022} {} \u{b7} {short}", people_names(&people), c.when), FontId::proportional(11.5), p.muted);
                 if !comparing && i < unpushed {
                     paint_icon(ui, "arrowUp", egui::Rect::from_center_size(egui::pos2(rect.max.x - 24.0, rect.center().y), egui::vec2(14.0, 14.0)), p.muted);
@@ -212,8 +213,20 @@ impl App {
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new("No commits yet").color(p.muted));
                 });
+            } else if !comparing && q.is_empty() && list.len() >= self.log_limit {
+                ui.add_space(10.0);
+                ui.vertical_centered(|ui| {
+                    if ui.button("Load 300 more commits").clicked() {
+                        more = true;
+                    }
+                });
+                ui.add_space(10.0);
             }
         });
+        if more {
+            self.log_limit += 300;
+            self.refresh();
+        }
         let ctx = ui.ctx().clone();
         for (email, sha) in want {
             self.want_avatar(&ctx, &email, sha.as_deref());
@@ -275,6 +288,7 @@ impl App {
     pub fn commit_files_column(&mut self, ctx: &egui::Context) {
         let p = self.pal();
         let mut pick_file: Option<Option<String>> = None;
+        let mut history_of: Option<String> = None;
         egui::SidePanel::left("commit_files_col")
             .resizable(true)
             .default_width(280.0)
@@ -318,11 +332,20 @@ impl App {
                         if resp.clicked() {
                             pick_file = Some(Some(path.clone()));
                         }
+                        resp.context_menu(|ui| {
+                            if ui.button("File history and blame...").clicked() {
+                                history_of = Some(path.clone());
+                                ui.close_menu();
+                            }
+                        });
                     }
                 });
             });
         if let Some(f) = pick_file {
             self.select_commit_file(f);
+        }
+        if let Some(f) = history_of {
+            self.open_file_history(&f);
         }
     }
 }

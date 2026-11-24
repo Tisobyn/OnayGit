@@ -52,7 +52,7 @@ pub fn load_spaces() -> Vec<Space> {
                     repos.push(PathBuf::from(f));
                 }
             }
-            (!name.is_empty()).then(|| Space { name, icon, color, repos })
+            (!name.is_empty()).then_some(Space { name, icon, color, repos })
         })
         .collect()
 }

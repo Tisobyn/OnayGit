@@ -7,6 +7,7 @@ pub enum Place {
     At(egui::Pos2, Align2),
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Show a dialog. Returns true when the user closed it (close button or Escape).
 pub fn modal(ctx: &egui::Context, p: &Pal, id: &str, width: f32, place: Place, title: &str, desc: &str, content: impl FnOnce(&mut egui::Ui)) -> bool {
     let mut close = false;

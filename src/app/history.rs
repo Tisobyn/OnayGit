@@ -28,7 +28,7 @@ impl App {
     pub fn load_graph(&mut self) {
         let Some(repo) = self.repo() else { return };
         self.graph_list = git::ref_list(&repo);
-        self.graph_commits = git::log_range(&repo, "--all");
+        self.graph_commits = git::log_n(&repo, "--all", self.log_limit);
         let (rows, lanes) = git::graph(&self.graph_commits);
         self.graph_rows = rows;
         self.graph_lanes = lanes;
@@ -36,6 +36,16 @@ impl App {
         for (name, _, hash) in &self.graph_list {
             self.graph_refs.entry(hash.clone()).or_default().push(name.clone());
         }
+    }
+
+    /// Open the file history window: commits that touched the file, and its blame.
+    pub fn open_file_history(&mut self, path: &str) {
+        let Some(repo) = self.repo() else { return };
+        self.fh_path = path.to_string();
+        self.fh_commits = git::file_log(&repo, path);
+        self.fh_blame = git::blame(&repo, path);
+        self.fh_tab = 0;
+        self.dialog = Some(Dialog::FileHistory);
     }
 
     pub fn select_commit(&mut self, hash: String) {

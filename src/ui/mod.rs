@@ -3,6 +3,7 @@ pub mod clone;
 pub mod conflicts;
 pub mod dialogs;
 pub mod diff_view;
+pub mod file_history;
 pub mod graph;
 pub mod graph_page;
 pub mod history;

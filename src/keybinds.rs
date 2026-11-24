@@ -130,10 +130,9 @@ fn key_name(key: egui::Key) -> Option<String> {
             let n = k.name();
             if n.len() == 1 {
                 n.to_lowercase()
-            } else if let Some(d) = n.strip_prefix("Num") {
-                d.to_string()
             } else {
-                return None;
+                let d = n.strip_prefix("Num")?;
+                d.to_string()
             }
         }
     })

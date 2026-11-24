@@ -24,6 +24,7 @@ impl App {
         let mut toggle_dir: Option<String> = None;
         let mut ignore: Option<String> = None;
         let mut ask: Option<Confirm> = None;
+        let mut history_of: Option<String> = None;
 
         egui::SidePanel::left("sidebar")
             .resizable(true)
@@ -315,6 +316,10 @@ impl App {
                                         }
                                     }
                                     ui.separator();
+                                    if ui.button("File history and blame...").clicked() {
+                                        history_of = Some(f.path.clone());
+                                        ui.close_menu();
+                                    }
                                     if ui.button("Copy file path").clicked() {
                                         ui.ctx().copy_text(f.path.clone());
                                         ui.close_menu();
@@ -386,6 +391,9 @@ impl App {
                 }
                 self.refresh();
             }
+        }
+        if let Some(f) = history_of {
+            self.open_file_history(&f);
         }
         if ask.is_some() {
             self.confirm = ask;

@@ -65,6 +65,7 @@ impl App {
     pub fn graph_main(&mut self, ctx: &egui::Context) {
         let p = self.pal();
         let mut pick: Option<String> = None;
+        let mut more = false;
         egui::CentralPanel::default().frame(egui::Frame::none().fill(p.bg)).show(ctx, |ui| {
             ui.add_space(12.0);
             ui.horizontal(|ui| {
@@ -84,10 +85,20 @@ impl App {
             if let Some(i) = self.graph_scroll.take() {
                 area = area.vertical_scroll_offset((i as f32 * ROW_H - 3.0 * ROW_H).max(0.0));
             }
-            area.show_rows(ui, ROW_H, self.graph_commits.len(), |ui, range| {
+            let total = self.graph_commits.len() + usize::from(self.graph_commits.len() >= self.log_limit);
+            area.show_rows(ui, ROW_H, total, |ui, range| {
                 ui.spacing_mut().item_spacing.y = 0.0;
                 for i in range {
-                    let (Some(c), Some(row)) = (self.graph_commits.get(i), self.graph_rows.get(i)) else { continue };
+                    let (Some(c), Some(row)) = (self.graph_commits.get(i), self.graph_rows.get(i)) else {
+                        // The extra last row is the "load more" button.
+                        ui.add_space(6.0);
+                        ui.vertical_centered(|ui| {
+                            if ui.button("Load 300 more commits").clicked() {
+                                more = true;
+                            }
+                        });
+                        continue;
+                    };
                     let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), ROW_H), Sense::click());
                     if resp.hovered() {
                         ui.painter().rect_filled(rect, 6.0, p.hover);
@@ -140,6 +151,10 @@ impl App {
                 }
             });
         });
+        if more {
+            self.log_limit += 300;
+            self.load_graph();
+        }
         if let Some(h) = pick {
             self.select_commit(h);
             self.tab = Tab::History;

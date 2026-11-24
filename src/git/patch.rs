@@ -90,12 +90,11 @@ pub fn build_patch(
                     last = true;
                 }
                 Kind::Add | Kind::Del => last = false,
-                Kind::Meta => {
-                    if last {
+                Kind::Meta
+                    if last => {
                         body.push_str(&l.text);
                         body.push('\n');
                     }
-                }
                 _ => {}
             }
         }

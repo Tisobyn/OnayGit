@@ -70,31 +70,64 @@ pub fn commit(repo: &Path, summary: &str, desc: &str) -> Result<String, String> 
     }
 }
 
+#[cfg(test)]
 pub fn log(repo: &Path) -> Vec<Commit> {
     log_range(repo, "HEAD")
 }
 
-/// Commits in a revision range such as `HEAD..feature`.
+/// Commits in a revision range such as `HEAD..feature`, at most 300.
 pub fn log_range(repo: &Path, range: &str) -> Vec<Commit> {
-    run(
-        repo,
-        &["log", "--max-count=300", "--topo-order", "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%ae%x1f%(trailers:key=Co-authored-by,valueonly,unfold,separator=%x1e)", range],
-    )
-    .unwrap_or_default()
-    .lines()
-    .filter_map(|l| {
-        let mut p = l.split('\x1f');
-        Some(Commit {
-            hash: p.next()?.to_string(),
-            author: p.next()?.to_string(),
-            when: p.next()?.to_string(),
-            subject: p.next()?.to_string(),
-            parents: p.next().unwrap_or("").split_whitespace().map(String::from).collect(),
-            email: p.next().unwrap_or("").to_string(),
-            coauthors: p.next().unwrap_or("").split('\x1e').filter_map(Person::parse).collect(),
+    log_n(repo, range, 300)
+}
+
+/// The newest `n` commits of a range or ref such as `HEAD` or `--all`.
+pub fn log_n(repo: &Path, range: &str, n: usize) -> Vec<Commit> {
+    let max = format!("--max-count={n}");
+    parse_log(&run(repo, &["log", &max, "--topo-order", LOG_FORMAT, range]).unwrap_or_default())
+}
+
+const LOG_FORMAT: &str = "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%ae%x1f%(trailers:key=Co-authored-by,valueonly,unfold,separator=%x1e)";
+
+fn parse_log(text: &str) -> Vec<Commit> {
+    text.lines()
+        .filter_map(|l| {
+            let mut p = l.split('\x1f');
+            Some(Commit {
+                hash: p.next()?.to_string(),
+                author: p.next()?.to_string(),
+                when: p.next()?.to_string(),
+                subject: p.next()?.to_string(),
+                parents: p.next().unwrap_or("").split_whitespace().map(String::from).collect(),
+                email: p.next().unwrap_or("").to_string(),
+                coauthors: p.next().unwrap_or("").split('\x1e').filter_map(Person::parse).collect(),
+            })
         })
-    })
-    .collect()
+        .collect()
+}
+
+/// Commits that changed one file, following renames.
+pub fn file_log(repo: &Path, path: &str) -> Vec<Commit> {
+    parse_log(&run(repo, &["log", "--follow", "--max-count=300", LOG_FORMAT, "--", path]).unwrap_or_default())
+}
+
+/// One line of `git blame`: (short hash, author, text).
+pub fn blame(repo: &Path, path: &str) -> Vec<(String, String, String)> {
+    let out = run(repo, &["blame", "--line-porcelain", "--", path]).unwrap_or_default();
+    let mut rows = Vec::new();
+    let (mut hash, mut author) = (String::new(), String::new());
+    for l in out.lines() {
+        if let Some(t) = l.strip_prefix('\t') {
+            rows.push((hash.chars().take(7).collect(), author.clone(), t.to_string()));
+            if rows.len() >= 5000 {
+                break;
+            }
+        } else if let Some(a) = l.strip_prefix("author ") {
+            author = a.to_string();
+        } else if l.len() >= 40 && l.as_bytes()[..40].iter().all(|b| b.is_ascii_hexdigit()) && l.as_bytes().get(40) == Some(&b' ') {
+            hash = l[..40].to_string();
+        }
+    }
+    rows
 }
 
 pub fn show(repo: &Path, hash: &str) -> String {
@@ -176,5 +209,51 @@ mod coauthor_tests {
     fn no_duplicates() {
         let b = "Body\n\nCo-authored-by: Claude <noreply@anthropic.com>";
         assert_eq!(with_coauthors(b, &[claude()]), b);
+    }
+}
+
+#[cfg(test)]
+mod history_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn repo(tag: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("onaygit-hist-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        for a in [&["init", "-q", "-b", "main"][..], &["config", "user.email", "t@t"], &["config", "user.name", "Tester"]] {
+            run(&d, a).unwrap();
+        }
+        let commit = |file: &str, text: &str, msg: &str| {
+            std::fs::write(d.join(file), text).unwrap();
+            run(&d, &["add", "."]).unwrap();
+            run(&d, &["commit", "-qm", msg]).unwrap();
+        };
+        commit("a.txt", "one\n", "first");
+        commit("b.txt", "other\n", "second");
+        commit("a.txt", "one\ntwo\n", "third");
+        d
+    }
+
+    #[test]
+    fn log_n_limits_and_file_log_follows_one_file() {
+        let d = repo("log");
+        assert_eq!(log_n(&d, "HEAD", 2).len(), 2);
+        assert_eq!(log_n(&d, "HEAD", 10).len(), 3);
+        let f = file_log(&d, "a.txt");
+        assert_eq!(f.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["third", "first"]);
+        let _ = std::fs::remove_dir_all(d);
+    }
+
+    #[test]
+    fn blame_gives_author_and_text_per_line() {
+        let d = repo("blame");
+        let b = blame(&d, "a.txt");
+        assert_eq!(b.len(), 2);
+        assert_eq!(b[0].2, "one");
+        assert_eq!(b[1].2, "two");
+        assert_eq!(b[0].1, "Tester");
+        assert_ne!(b[0].0, b[1].0);
+        let _ = std::fs::remove_dir_all(d);
     }
 }

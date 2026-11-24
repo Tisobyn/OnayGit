@@ -1,6 +1,9 @@
 use crate::prelude::*;
 use crate::ui::toolbar_menu::{tb_cell, TbMenu};
 
+/// (icon, title, subtitle, optional (task label, git args)).
+pub type SyncInfo = (&'static str, String, String, Option<(&'static str, Vec<String>)>);
+
 impl App {
     pub fn toolbar(&mut self, ctx: &egui::Context) {
         self.tour_rects[1] = None;
@@ -84,7 +87,7 @@ impl App {
     }
 
     /// What the sync button does now: (icon, title, subtitle, git args). No args and a remote means busy or nothing to do.
-    pub fn sync_info(&self) -> (&'static str, String, String, Option<(&'static str, Vec<String>)>) {
+    pub fn sync_info(&self) -> SyncInfo {
         let remote = self.remote_name.clone();
         let args = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         if !self.has_remote {
