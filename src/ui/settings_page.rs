@@ -519,6 +519,9 @@ impl App {
         });
         settings_group(ui, p, "Commit messages", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
+                toggle_row(ui, p, "Profile pictures", "Look up pictures of commit authors online (GitHub CLI, GitHub, Gravatar). Off shows initials.", &mut self.settings.avatars);
+            });
+            group_row(ui, p, |ui| {
                 toggle_row(ui, p, "Commit type badges", "Compact labels for feat, fix, refactor and other conventional prefixes. Original messages are unchanged.", &mut self.settings.commit_badges);
             });
         });
@@ -1333,6 +1336,11 @@ fn privacy_page(ui: &mut egui::Ui, p: &Pal) {
         group_row(ui, p, |ui| {
             ui.label(RichText::new("No usage statistics").size(13.5).color(p.text));
             ui.label(RichText::new("OnayGit has no telemetry. It sends nothing to servers of its own.").size(12.0).color(p.muted));
+        });
+    });
+    settings_group(ui, p, "Profile pictures", "", |_| {}, |ui| {
+        group_row(ui, p, |ui| {
+            ui.label(RichText::new("Commit author pictures are looked up with the GitHub CLI, GitHub, or Gravatar. Author emails are used for this lookup. Turn it off in Settings > Appearance.").size(12.0).color(p.muted));
         });
     });
     settings_group(ui, p, "What's sent", "", |_| {}, |ui| {

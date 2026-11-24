@@ -66,7 +66,7 @@ impl App {
     /// `sha` is a commit by this person, if the email is the commit author's.
     pub fn want_avatar(&mut self, ctx: &egui::Context, email: &str, sha: Option<&str>) {
         let key = email.trim().to_lowercase();
-        if key.is_empty() || self.avatars.contains_key(&key) {
+        if !self.settings.avatars || key.is_empty() || self.avatars.contains_key(&key) {
             return;
         }
         let label = format!("{T_AVATAR}{key}");

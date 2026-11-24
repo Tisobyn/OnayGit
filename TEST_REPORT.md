@@ -137,3 +137,13 @@ Not changed:
 - UI 4: Escape already closes dialogs. The earlier failure was the test tool, not the app.
 - UI 8: settings page widths differ on purpose (they follow 1git).
 - Rail sync button feedback: not changed, needs a real remote to judge.
+
+---
+
+# Round 3 checks
+
+Working: Cmd+T (Home), Cmd+, (Settings), Cmd+1 (first tab), Cmd+W (close tab), Cmd+P, Cmd+F.
+Themes: Light and Midnight look right on Changes, History, Home and Settings. No contrast problems found.
+New: Settings > About, commit pictures, co-author picker, "Profile pictures" switch (Appearance) and a Privacy note.
+
+Still not tested: Clone with a real account, pull request create, native file pickers, "All users" install, Cmd+R fetch with a real remote, tab reorder, Nord and Sand themes.

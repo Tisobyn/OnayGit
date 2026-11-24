@@ -22,6 +22,8 @@ pub struct Settings {
     pub grain_pattern: usize,
     pub grain_strength: usize,
     pub commit_badges: bool,
+    /// Look up profile pictures of commit authors online.
+    pub avatars: bool,
     pub refresh_secs: u64,
     pub editor: String,
     pub ai: AiConfig,
@@ -50,6 +52,7 @@ impl Default for Settings {
             grain_pattern: 1,
             grain_strength: 1,
             commit_badges: true,
+            avatars: true,
             refresh_secs: 3,
             editor: "open".into(),
             ai: AiConfig::default(),
@@ -95,6 +98,7 @@ impl Settings {
                 "grain_pattern" => s.grain_pattern = v.parse().unwrap_or(1).min(2),
                 "grain_strength" => s.grain_strength = v.parse().unwrap_or(1).min(2),
                 "commit_badges" => s.commit_badges = v != "false",
+                "avatars" => s.avatars = v != "false",
                 "refresh_secs" => s.refresh_secs = v.parse().unwrap_or(3),
                 "editor" => s.editor = v.to_string(),
                 "ai_provider" => s.ai.provider = AiProvider::from_key(v).unwrap_or(AiProvider::ClaudeCode),
@@ -117,7 +121,7 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\ntour={}\ntour_skipped={}\nai_cli_model={}\nai_effort={}\nai_plan={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\ntour={}\ntour_skipped={}\nai_cli_model={}\nai_effort={}\nai_plan={}\navatars={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
@@ -141,6 +145,7 @@ impl Settings {
             self.ai.cli_model.replace('\n', " "),
             self.ai.effort,
             self.ai.plan,
+            self.avatars,
         );
         let _ = std::fs::write(settings_path(), text);
     }
