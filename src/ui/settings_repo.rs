@@ -10,6 +10,7 @@ impl App {
             return;
         };
         ui.label(RichText::new(format!("Remotes of {}", repo_name(&repo))).color(p.muted));
+        ui.label(RichText::new("A remote is the online copy of this repository, for example on GitHub. Push and fetch use it. \"origin\" is the usual name of the main one.").size(12.5).color(p.muted));
         ui.add_space(8.0);
 
         let mut remove: Option<String> = None;
@@ -86,46 +87,4 @@ impl App {
         }
     }
 
-    pub fn repo_style_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_title(ui, "Repository appearance", p);
-        let Some(repo) = self.repo() else {
-            ui.label(RichText::new("Open a repository first.").color(p.muted));
-            return;
-        };
-        let mut style = self.style_of(&repo);
-        let before = style.clone();
-        ui.label(RichText::new(format!("Color and icon of {}", repo_name(&repo))).color(p.muted));
-        ui.add_space(10.0);
-        ui.label("Color");
-        ui.horizontal(|ui| {
-            for (i, (name, color)) in ACCENTS.iter().enumerate() {
-                let (rect, resp) = ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
-                ui.painter().circle_filled(rect.center(), 11.0, *color);
-                if style.color == i {
-                    paint_icon(ui, "check", rect.shrink(6.0), Color32::WHITE);
-                }
-                if resp.on_hover_text(*name).clicked() {
-                    style.color = i;
-                }
-            }
-        });
-        ui.add_space(12.0);
-        ui.label("Icon");
-        ui.horizontal_wrapped(|ui| {
-            for name in REPO_ICONS {
-                let (rect, resp) = ui.allocate_exact_size(egui::vec2(36.0, 36.0), Sense::click());
-                let on = style.icon == name;
-                if on || resp.hovered() {
-                    ui.painter().rect_filled(rect, 8.0, if on { ACCENTS[style.color].1.gamma_multiply(0.35) } else { p.hover });
-                }
-                paint_icon(ui, name, rect.shrink(8.0), if on { ACCENTS[style.color].1 } else { p.muted });
-                if resp.clicked() {
-                    style.icon = name.to_string();
-                }
-            }
-        });
-        if style != before {
-            self.set_style(&repo, style);
-        }
-    }
 }

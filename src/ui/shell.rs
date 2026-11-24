@@ -380,7 +380,7 @@ impl App {
                     items.push((l.into(), false, true));
                 }
                 items.push(sep());
-                for l in ["Customize appearance...", "Remotes...", "Commit identity...", "Ignored file history..."] {
+                for l in ["Remotes...", "Ignored file history..."] {
                     items.push((l.into(), false, true));
                 }
                 items.push(sep());
@@ -477,12 +477,7 @@ impl App {
             (0, "Spaces...") => open(self, Section::Spaces),
             (0, "AI...") => open(self, Section::Ai),
             (0, "Help...") => open(self, Section::Help),
-            (0, "Customize appearance...") => open(self, Section::RepoStyle),
             (0, "Remotes...") => open(self, Section::Remotes),
-            (0, "Commit identity...") => {
-                open(self, Section::Identity);
-                self.load_repo_identity();
-            }
             (0, "Ignored file history...") => {
                 open(self, Section::Ignore);
                 self.ignore_text = self.repo().map(|r| git::read_ignore(&r)).unwrap_or_default();

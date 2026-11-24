@@ -75,6 +75,16 @@ impl App {
         let _ = std::fs::write(spaces_path(), text.join("\n"));
     }
 
+    /// Go to Settings > Spaces with the new space panel open.
+    pub fn start_new_space(&mut self) {
+        self.open_settings();
+        self.section = Section::Spaces;
+        self.space_name.clear();
+        self.space_icon = "layers".into();
+        self.space_color = None;
+        self.space_dialog = Some(None);
+    }
+
     pub fn add_space(&mut self) {
         let name = self.space_name.trim().to_string();
         if name.is_empty() || self.spaces.iter().any(|s| s.name == name) {

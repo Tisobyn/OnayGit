@@ -43,8 +43,6 @@ pub enum Section {
     Accounts,
     Ai,
     Remotes,
-    RepoStyle,
-    Identity,
     Ignore,
     Help,
     About,
@@ -226,8 +224,6 @@ pub struct App {
     pub keybinds: HashMap<String, String>,
     pub recording: Option<&'static str>,
     pub keybind_msg: String,
-    pub repo_name_cfg: String,
-    pub repo_email_cfg: String,
     pub repo_info: HashMap<PathBuf, RepoInfo>,
     pub info_at: Option<Instant>,
     pub card_rect: egui::Rect,
@@ -403,8 +399,6 @@ impl App {
             keybinds: crate::keybinds::load(),
             recording: None,
             keybind_msg: String::new(),
-            repo_name_cfg: String::new(),
-            repo_email_cfg: String::new(),
             repo_info: HashMap::new(),
             info_at: None,
             card_rect: egui::Rect::NOTHING,
@@ -508,8 +502,6 @@ impl App {
                     "help" => Section::Help,
                     "about" => Section::About,
                     "remotes" => Section::Remotes,
-                    "repostyle" => Section::RepoStyle,
-                    "identity" => Section::Identity,
                     "ignore" => Section::Ignore,
                     _ => app.section,
                 };
@@ -688,6 +680,9 @@ impl eframe::App for App {
                 self.toolbar(ctx);
                 self.status_bar(ctx);
                 self.sidebar(ctx);
+                if self.tab == Tab::History && self.selected_commit.is_some() {
+                    self.commit_files_column(ctx);
+                }
                 self.main_panel(ctx);
             }
         }

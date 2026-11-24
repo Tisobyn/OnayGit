@@ -67,7 +67,7 @@ impl App {
                             ui.close_menu();
                         }
                     });
-                    ui.separator();
+                    toolbar_divider(ui);
 
                     // Branch block
                     icon(ui, "branch", 18.0, p.muted);
@@ -131,7 +131,7 @@ impl App {
                         }
                     });
                     self.tour_rects[0] = Some(branch_btn.response.rect);
-                    ui.separator();
+                    toolbar_divider(ui);
 
                     // Sync block (Fetch / Pull / Push / Publish like GitHub Desktop)
                     let (title, sub, args): (String, String, Option<(&str, Vec<&str>)>) = if !self.has_remote {
@@ -177,7 +177,7 @@ impl App {
                         "sync"
                     };
                     icon(ui, sync_icon, 18.0, p.muted);
-                    if ui.add_enabled(enabled, egui::Button::new(label).frame(false)).clicked() {
+                    if ui.add_enabled(enabled, egui::Button::new(label)).clicked() {
                         if no_remote {
                             open_pub = true;
                         } else {
@@ -258,4 +258,11 @@ impl App {
             }
         }
     }
+}
+
+/// Thin vertical line between toolbar cells, with equal room on both sides.
+fn toolbar_divider(ui: &mut egui::Ui) {
+    ui.add_space(4.0);
+    ui.separator();
+    ui.add_space(6.0);
 }

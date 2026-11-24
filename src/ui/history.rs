@@ -1,4 +1,4 @@
-//! History tab: compare bar, commit list with graph, files of the selected commit.
+//! History tab: compare bar and commit list with graph. The changed files of the selected commit are in a column on the right.
 #[allow(unused_imports)]
 use crate::prelude::*;
 
@@ -6,7 +6,6 @@ impl App {
     pub fn history_tab(&mut self, ui: &mut egui::Ui, p: &Pal) {
         let mut new_compare: Option<Option<String>> = None;
         let mut pick: Option<String> = None;
-        let mut pick_file: Option<Option<String>> = None;
         let mut action: Option<(CommitAction, String)> = None;
 
         ui.horizontal(|ui| {
@@ -88,55 +87,6 @@ impl App {
                     });
                 });
             });
-
-        // Files of the selected commit, pinned at the bottom.
-        if self.selected_commit.is_some() {
-            egui::TopBottomPanel::bottom("commit_files")
-                .resizable(true)
-                .default_height(170.0)
-                .frame(egui::Frame::none().fill(p.sidebar))
-                .show_inside(ui, |ui| {
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        ui.add_space(14.0);
-                        ui.label(RichText::new("Changed files").size(12.5).color(p.text));
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.add_space(14.0);
-                            ui.label(RichText::new(self.commit_files.len().to_string()).size(12.5).color(p.muted));
-                            if self.selected_commit_file.is_some() && ui.add(egui::Button::new(RichText::new("Show all").size(12.0).color(p.muted)).small().frame(false)).clicked() {
-                                pick_file = Some(None);
-                            }
-                        });
-                    });
-                    ui.add_space(2.0);
-                    egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = 0.0;
-                        for (st, path) in &self.commit_files {
-                            let sel = self.selected_commit_file.as_deref() == Some(path.as_str());
-                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 30.0), Sense::click());
-                            if sel || resp.hovered() {
-                                ui.painter().rect_filled(rect.shrink2(egui::vec2(6.0, 1.0)), 6.0, if sel { p.hover } else { p.hover.gamma_multiply(0.5) });
-                            }
-                            let mut badge_ui = ui.new_child(egui::UiBuilder::new().max_rect(egui::Rect::from_min_size(egui::pos2(rect.min.x + 16.0, rect.center().y - 7.0), egui::vec2(14.0, 14.0))));
-                            status_badge(&mut badge_ui, *st);
-                            let (dir, name) = match path.rsplit_once('/') {
-                                Some((d, n)) => (d.to_string(), n.to_string()),
-                                None => (String::new(), path.clone()),
-                            };
-                            let clip = ui.painter().with_clip_rect(rect.shrink2(egui::vec2(8.0, 0.0)));
-                            let g = clip.layout_no_wrap(name, FontId::proportional(13.5), p.text);
-                            let nw = g.size().x;
-                            clip.galley(egui::pos2(rect.min.x + 40.0, rect.center().y - g.size().y / 2.0), g, p.text);
-                            if !dir.is_empty() {
-                                clip.text(egui::pos2(rect.min.x + 48.0 + nw, rect.center().y), Align2::LEFT_CENTER, dir, FontId::proportional(12.0), p.muted);
-                            }
-                            if resp.clicked() {
-                                pick_file = Some(Some(path.clone()));
-                            }
-                        }
-                    });
-                });
-        }
 
         let comparing = self.compare.is_some();
         let list: &Vec<Commit> = if comparing { &self.compare_commits } else { &self.commits };
@@ -291,9 +241,6 @@ impl App {
         if let Some(h) = pick {
             self.select_commit(h);
         }
-        if let Some(f) = pick_file {
-            self.select_commit_file(f);
-        }
         if let Some((a, h)) = action {
             self.commit_action(a, h);
         }
@@ -321,5 +268,62 @@ pub fn badge_color(kind: &str) -> Color32 {
         "perf" => Color32::from_rgb(233, 152, 85),
         "test" => Color32::from_rgb(217, 179, 74),
         _ => Color32::from_rgb(130, 148, 179),
+    }
+}
+
+impl App {
+    /// Column on the right with the changed files of the selected commit.
+    pub fn commit_files_column(&mut self, ctx: &egui::Context) {
+        let p = self.pal();
+        let mut pick_file: Option<Option<String>> = None;
+        egui::SidePanel::right("commit_files_col")
+            .resizable(true)
+            .default_width(280.0)
+            .width_range(200.0..=520.0)
+            .frame(egui::Frame::none().fill(p.sidebar))
+            .show(ctx, |ui| {
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(14.0);
+                    ui.label(RichText::new("Changed files").size(13.0).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add_space(14.0);
+                        ui.label(RichText::new(self.commit_files.len().to_string()).size(12.5).color(p.muted));
+                        if self.selected_commit_file.is_some() && ui.add(egui::Button::new(RichText::new("Show all").size(12.0).color(p.muted)).small().frame(false)).clicked() {
+                            pick_file = Some(None);
+                        }
+                    });
+                });
+                ui.add_space(6.0);
+                egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    for (st, path) in &self.commit_files {
+                        let sel = self.selected_commit_file.as_deref() == Some(path.as_str());
+                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 30.0), Sense::click());
+                        if sel || resp.hovered() {
+                            ui.painter().rect_filled(rect.shrink2(egui::vec2(6.0, 1.0)), 6.0, if sel { p.hover } else { p.hover.gamma_multiply(0.5) });
+                        }
+                        let mut badge_ui = ui.new_child(egui::UiBuilder::new().max_rect(egui::Rect::from_min_size(egui::pos2(rect.min.x + 16.0, rect.center().y - 7.0), egui::vec2(14.0, 14.0))));
+                        status_badge(&mut badge_ui, *st);
+                        let (dir, name) = match path.rsplit_once('/') {
+                            Some((d, n)) => (d.to_string(), n.to_string()),
+                            None => (String::new(), path.clone()),
+                        };
+                        let clip = ui.painter().with_clip_rect(rect.shrink2(egui::vec2(8.0, 0.0)));
+                        let g = clip.layout_no_wrap(name, FontId::proportional(13.5), p.text);
+                        let nw = g.size().x;
+                        clip.galley(egui::pos2(rect.min.x + 40.0, rect.center().y - g.size().y / 2.0), g, p.text);
+                        if !dir.is_empty() {
+                            clip.text(egui::pos2(rect.min.x + 48.0 + nw, rect.center().y), Align2::LEFT_CENTER, dir, FontId::proportional(12.0), p.muted);
+                        }
+                        if resp.clicked() {
+                            pick_file = Some(Some(path.clone()));
+                        }
+                    }
+                });
+            });
+        if let Some(f) = pick_file {
+            self.select_commit_file(f);
+        }
     }
 }

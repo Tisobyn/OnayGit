@@ -41,17 +41,12 @@ impl App {
                 rail_label(ui, "Repository", &p);
                 for (s, icon, name) in [
                     (Section::Remotes, "network", "Remotes"),
-                    (Section::RepoStyle, "palette", "Appearance"),
-                    (Section::Identity, "idCard", "Commit identity"),
                     (Section::Ignore, "ignored", "Ignored files"),
                 ] {
                     if rail_item(ui, icon, name, self.section == s, &p).clicked() {
                         self.section = s;
                         if s == Section::Ignore {
                             self.ignore_text = self.repo().map(|r| git::read_ignore(&r)).unwrap_or_default();
-                        }
-                        if s == Section::Identity {
-                            self.load_repo_identity();
                         }
                     }
                 }
@@ -117,8 +112,6 @@ impl App {
                         Section::Accounts => self.accounts_page(ui, &p),
                         Section::Ai => self.ai_page(ui, &p),
                         Section::Remotes => self.remotes_page(ui, &p),
-                        Section::RepoStyle => self.repo_style_page(ui, &p),
-                        Section::Identity => self.identity_page(ui, &p),
                         Section::Help => self.help_page(ui, &p),
                         Section::About => self.about_page(ui, &p),
                     }
@@ -889,37 +882,6 @@ impl App {
         });
     }
 
-    pub fn load_repo_identity(&mut self) {
-        let Some(repo) = self.repo() else { return };
-        let get = |k: &str| git::run(&repo, &["config", "--local", k]).map(|s| s.trim().to_string()).unwrap_or_default();
-        self.repo_name_cfg = get("user.name");
-        self.repo_email_cfg = get("user.email");
-    }
-
-    fn identity_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Commit identity", "Override your name and email for this repository only.", |_| {});
-        let Some(repo) = self.repo() else {
-            ui.label(RichText::new("Open a repository first.").color(p.muted));
-            return;
-        };
-        settings_group(ui, p, "Identity", &repo_name(&repo), |_| {}, |ui| {
-            group_row(ui, p, |ui| {
-                field_label(ui, p, "Name");
-                framed(ui, &p, egui::TextEdit::singleline(&mut self.repo_name_cfg).hint_text(&self.git_name).desired_width(f32::INFINITY));
-                field_label(ui, p, "Email");
-                framed(ui, &p, egui::TextEdit::singleline(&mut self.repo_email_cfg).hint_text(&self.git_email).desired_width(f32::INFINITY));
-                ui.add_space(6.0);
-                if ui.button("Save").clicked() {
-                    for (k, v) in [("user.name", self.repo_name_cfg.trim()), ("user.email", self.repo_email_cfg.trim())] {
-                        let args: Vec<&str> = if v.is_empty() { vec!["config", "--local", "--unset", k] } else { vec!["config", "--local", k, v] };
-                        let _ = git::run(&repo, &args);
-                    }
-                    self.status_msg = "Saved".into();
-                }
-            });
-        });
-    }
-
     fn accounts_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
         let mut add = false;
         page_header(ui, p, "Accounts", "Connected hosting accounts.", |ui| {
@@ -1008,19 +970,15 @@ impl App {
         let busy = self.task_running(T_SIGN_IN) || self.task_running(T_DEVICE);
         egui::ScrollArea::vertical().auto_shrink([false, false]).max_height(ui.available_height() - footer_h).show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 6.0;
-            let tile_w = (ui.available_width() - 20.0) / 3.0;
+            let tile_w = (ui.available_width() - 10.0) / 2.0;
             ui.label(RichText::new("Provider").size(13.0).color(p.text));
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 10.0;
-                for (icon_name, label, which) in [("github", "GitHub", 0), ("gitlab", "GitLab", 1), ("help", "Other...", 2)] {
-                    let on = match which {
-                        0 => gh && !self.acct_advanced,
-                        1 => !gh,
-                        _ => gh && self.acct_advanced,
-                    };
+                for (icon_name, label, which) in [("github", "GitHub", 0), ("gitlab", "GitLab", 1)] {
+                    let on = if which == 0 { gh } else { !gh };
                     if choice_tile(ui, p, icon_name, label, on, tile_w).clicked() {
                         self.acct_provider = if which == 1 { git::Provider::GitLab } else { git::Provider::GitHub };
-                        self.acct_advanced = which == 2;
+                        self.acct_advanced = false;
                         self.acct_host.clear();
                         self.device = None;
                     }

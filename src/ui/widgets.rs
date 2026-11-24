@@ -10,12 +10,12 @@ pub fn two_line(label: &str, value: &str, p: &Pal) -> LayoutJob {
     j.append(
         &format!("{label}\n"),
         0.0,
-        TextFormat { font_id: FontId::proportional(10.0), color: p.muted, ..Default::default() },
+        TextFormat { font_id: FontId::proportional(10.5), color: p.muted, line_height: Some(14.0), ..Default::default() },
     );
     j.append(
         value,
         0.0,
-        TextFormat { font_id: FontId::proportional(12.5), color: p.text, ..Default::default() },
+        TextFormat { font_id: FontId::proportional(13.0), color: p.text, line_height: Some(16.0), ..Default::default() },
     );
     j
 }
@@ -245,12 +245,6 @@ pub fn page_header(ui: &mut egui::Ui, p: &Pal, title: &str, desc: &str, action: 
         ui.label(RichText::new(desc).size(12.5).color(p.muted));
     }
     ui.add_space(14.0);
-}
-
-/// Label above a field.
-pub fn field_label(ui: &mut egui::Ui, p: &Pal, text: &str) {
-    ui.add_space(4.0);
-    ui.label(RichText::new(text).size(13.0).color(p.text));
 }
 
 /// Big selectable tile (icon above text), used for provider and method choices.

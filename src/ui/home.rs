@@ -60,14 +60,9 @@ impl App {
                         }
                     });
                 }
-                ui.horizontal(|ui| {
-                    let w = ui.available_width() - 70.0;
-                    let r = framed(ui, &p, egui::TextEdit::singleline(&mut self.space_name).hint_text("New space").desired_width(w));
-                    let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                    if ui.small_button("Add").clicked() || enter {
-                        new_space = true;
-                    }
-                });
+                if rail_item(ui, "add", "New space...", false, &p).clicked() {
+                    new_space = true;
+                }
                 ui.add_space(20.0);
                 rail_label(ui, "QUICK ACTIONS", &p);
                 let r = rail_item_h(ui, "add", "Create repository", false, &p, 28.0);
@@ -287,7 +282,7 @@ impl App {
             }
         }
         if new_space {
-            self.add_space();
+            self.start_new_space();
         }
         if let Some(i) = del_space {
             self.remove_space(i);

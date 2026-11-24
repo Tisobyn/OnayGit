@@ -2,12 +2,6 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
 
-/// Icons a repository can use.
-pub const REPO_ICONS: [&str; 12] = [
-    "folder", "branch", "layers", "terminal", "sparkle", "tree", "archive", "home", "network", "palette", "history",
-    "shield",
-];
-
 #[derive(Clone, PartialEq)]
 pub struct RepoStyle {
     /// Index into ACCENTS.
@@ -57,15 +51,6 @@ impl App {
             text.extend(list.iter().map(|p| format!("{space}\t{}", p.display())));
         }
         let _ = std::fs::write(tabs_path(), text.join("\n"));
-    }
-
-    fn save_styles(&self) {
-        let text: Vec<String> = self
-            .repo_styles
-            .iter()
-            .map(|(p, s)| format!("{}\t{}\t{}", p.display(), s.color, s.icon))
-            .collect();
-        let _ = std::fs::write(styles_path(), text.join("\n"));
     }
 
     /// Show another space. Each space keeps its own tabs.
@@ -132,10 +117,5 @@ impl App {
             let sum: usize = path.to_string_lossy().bytes().map(|b| b as usize).sum();
             RepoStyle { color: sum % ACCENTS.len(), icon: "folder".to_string() }
         })
-    }
-
-    pub fn set_style(&mut self, path: &Path, style: RepoStyle) {
-        self.repo_styles.insert(path.to_path_buf(), style);
-        self.save_styles();
     }
 }

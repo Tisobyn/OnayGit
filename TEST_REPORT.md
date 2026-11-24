@@ -147,3 +147,15 @@ Themes: Light and Midnight look right on Changes, History, Home and Settings. No
 New: Settings > About, commit pictures, co-author picker, "Profile pictures" switch (Appearance) and a Privacy note.
 
 Still not tested: Clone with a real account, pull request create, native file pickers, "All users" install, Cmd+R fetch with a real remote, tab reorder, Nord and Sand themes.
+
+---
+
+# Round 4 changes
+
+- Home: "New space..." button opens Settings > Spaces with the new space panel.
+- Settings > Accounts: "Other" provider removed (GitHub and GitLab only).
+- Settings > Repository now has Remotes (with a short explanation) and Ignored files. Repository Appearance and Commit identity were removed; the identity is in Settings > Git.
+- Toolbar: same spacing between icon, text and dividers in all three cells; clearer two-line text.
+- History: changed files of the selected commit are in a column on the right.
+- Checked: Nord theme looks right.
+- Not tested: Sand theme, tab reorder, real-account flows, file pickers.
