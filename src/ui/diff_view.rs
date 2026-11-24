@@ -119,7 +119,7 @@ pub fn draw_diff(
                                     painter.rect_filled(b, 2.0, ACCENT);
                                     painter.text(b.center(), Align2::CENTER_CENTER, "✓", FontId::proportional(side - 2.0), Color32::WHITE);
                                 } else {
-                                    painter.rect_stroke(b, 2.0, egui::Stroke::new(1.0, p.muted));
+                                    painter.rect_stroke(b, 2.0, egui::Stroke::new(1.0_f32, p.muted));
                                 }
                                 if click_x.is_some_and(|x| x <= gutter_w) {
                                     events.push(DiffEvent::ToggleLine(idx));

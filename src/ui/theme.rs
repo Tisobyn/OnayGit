@@ -68,7 +68,7 @@ pub fn apply_visuals(ctx: &egui::Context, dark: bool) {
     v.window_fill = p.bg;
     v.extreme_bg_color = p.input;
     v.selection.bg_fill = ACCENT;
-    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, p.border);
+    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0_f32, p.border);
     ctx.set_visuals(v);
 }
 

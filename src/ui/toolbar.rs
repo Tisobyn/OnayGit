@@ -19,7 +19,7 @@ impl App {
             .frame(
                 egui::Frame::none()
                     .fill(p.toolbar)
-                    .stroke(egui::Stroke::new(1.0, p.border))
+                    .stroke(egui::Stroke::new(1.0_f32, p.border))
                     .inner_margin(egui::Margin::symmetric(4.0, 0.0)),
             )
             .show(ctx, |ui| {
