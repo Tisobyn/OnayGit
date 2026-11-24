@@ -90,30 +90,45 @@ impl App {
     }
 
     fn application_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Application", "Command line launcher and general behavior.", |_| {});
-        let bin = home_dir().join(".local/bin/onaygit");
-        let installed = bin.exists();
-        let mut toggle = false;
-        settings_group(ui, p, "Launcher", if installed { "Installed" } else { "Not installed" }, |_| {}, |ui| {
-            group_row(ui, p, |ui| {
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(RichText::new("onaygit command").size(13.5).color(p.text));
-                        ui.label(RichText::new("Open a folder from the terminal with onaygit <path>.").size(12.0).color(p.muted));
-                        if !self.launcher_msg.is_empty() {
-                            ui.label(RichText::new(&self.launcher_msg).size(12.0).color(p.muted));
-                        }
-                    });
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button(if installed { "Uninstall" } else { "Install" }).clicked() {
-                            toggle = true;
-                        }
+        page_header(ui, p, "Application", "Install the onaygit command so local paths open in this app.", |_| {});
+        let user_bin = home_dir().join(".local/bin/onaygit");
+        let sys_bin = PathBuf::from("/usr/local/bin/onaygit");
+        let mut act: Option<(bool, bool)> = None;
+        settings_group(ui, p, "Command-line launcher", "", |_| {}, |ui| {
+            for (system, name, desc, bin) in [
+                (true, "All users", "Install in /usr/local/bin. macOS may ask for administrator approval.", &sys_bin),
+                (false, "Only me", "Install in ~/.local/bin without administrator access.", &user_bin),
+            ] {
+                let installed = bin.exists();
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(name).size(13.5).color(p.text));
+                            ui.label(RichText::new(desc).size(12.0).color(p.muted));
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button(if installed { "Uninstall" } else { "Install" }).clicked() {
+                                act = Some((system, installed));
+                            }
+                            ui.label(RichText::new(if installed { "Installed" } else { "Not installed" }).size(12.0).color(p.muted));
+                        });
                     });
                 });
-            });
+            }
         });
-        if toggle {
-            self.launcher_msg = match toggle_launcher(&bin, installed) {
+        if !self.launcher_msg.is_empty() {
+            ui.label(RichText::new(&self.launcher_msg).size(12.0).color(p.muted));
+        } else {
+            ui.label(
+                RichText::new(format!("The per-user command will be installed at {}. Add ~/.local/bin to PATH if your shell cannot find it.", user_bin.parent().unwrap().display()))
+                    .size(12.0)
+                    .color(p.muted),
+            );
+        }
+        ui.add_space(14.0);
+        if let Some((system, installed)) = act {
+            let bin = if system { sys_bin } else { user_bin };
+            self.launcher_msg = match toggle_launcher(&bin, installed, system) {
                 Ok(m) => m,
                 Err(e) => e,
             };
@@ -513,16 +528,30 @@ fn privacy_page(ui: &mut egui::Ui, p: &Pal) {
     });
 }
 
-/// Link or remove the `onaygit` command in ~/.local/bin.
-fn toggle_launcher(bin: &Path, installed: bool) -> Result<String, String> {
+/// Link or remove the `onaygit` command. The system folder asks macOS for admin approval.
+fn toggle_launcher(bin: &Path, installed: bool, system: bool) -> Result<String, String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    if system {
+        let cmd = if installed {
+            format!("rm -f '{}'", bin.display())
+        } else {
+            format!("mkdir -p /usr/local/bin && ln -sf '{}' '{}'", exe.display(), bin.display())
+        };
+        let script = format!("do shell script \"{}\" with administrator privileges", cmd.replace('\\', "\\\\").replace('"', "\\\""));
+        let out = std::process::Command::new("osascript").arg("-e").arg(script).output().map_err(|e| e.to_string())?;
+        return if out.status.success() {
+            Ok(if installed { "Removed".into() } else { format!("Installed at {}", bin.display()) })
+        } else {
+            Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+        };
+    }
     if installed {
         std::fs::remove_file(bin).map_err(|e| e.to_string())?;
         return Ok("Removed".into());
     }
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     if let Some(dir) = bin.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
     std::os::unix::fs::symlink(exe, bin).map_err(|e| e.to_string())?;
-    Ok(format!("Installed at {}. Add that folder to your PATH if needed.", bin.display()))
+    Ok(format!("Installed at {}", bin.display()))
 }

@@ -345,10 +345,23 @@ impl App {
             }
         }
         app.refresh();
+        // `onaygit <path>` opens that folder as a repository.
+        if let Some(arg) = std::env::args().nth(1) {
+            if let Ok(path) = std::fs::canonicalize(&arg) {
+                if path.is_dir() && git::is_repo(&path) {
+                    app.open_repo(path);
+                }
+            }
+        }
         // Handy for screenshots: ONAYGIT_SCREEN=home|settings
         match std::env::var("ONAYGIT_SCREEN").as_deref() {
             Ok("home") => app.screen = Screen::Home,
             Ok("settings") => app.open_settings(),
+            Ok("repo") => {
+                if let Some(r) = app.repos.first().cloned() {
+                    app.open_repo(r);
+                }
+            }
             _ => {}
         }
         app
