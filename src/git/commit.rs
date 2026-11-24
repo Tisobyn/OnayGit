@@ -7,6 +7,7 @@ pub struct Commit {
     pub author: String,
     pub when: String,
     pub subject: String,
+    pub parents: Vec<String>,
 }
 
 pub fn commit(repo: &Path, summary: &str, desc: &str) -> Result<String, String> {
@@ -25,7 +26,7 @@ pub fn log(repo: &Path) -> Vec<Commit> {
 pub fn log_range(repo: &Path, range: &str) -> Vec<Commit> {
     run(
         repo,
-        &["log", "--max-count=300", "--format=%H%x1f%an%x1f%ar%x1f%s", range],
+        &["log", "--max-count=300", "--topo-order", "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P", range],
     )
     .unwrap_or_default()
     .lines()
@@ -36,6 +37,7 @@ pub fn log_range(repo: &Path, range: &str) -> Vec<Commit> {
             author: p.next()?.to_string(),
             when: p.next()?.to_string(),
             subject: p.next()?.to_string(),
+            parents: p.next().unwrap_or("").split_whitespace().map(String::from).collect(),
         })
     })
     .collect()
@@ -70,4 +72,34 @@ pub fn undo_commit(repo: &Path) -> Result<String, String> {
     } else {
         run(repo, &["update-ref", "-d", "HEAD"])
     }
+}
+
+/// Files changed by a commit as (status letter, path).
+pub fn commit_files(repo: &Path, hash: &str) -> Vec<(char, String)> {
+    run(repo, &["show", "--name-status", "--no-renames", "--format=", hash])
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| {
+            let (st, path) = l.split_once('\t')?;
+            Some((st.chars().next()?, path.to_string()))
+        })
+        .collect()
+}
+
+/// Diff of one file in one commit.
+pub fn show_file(repo: &Path, hash: &str, path: &str) -> String {
+    run(repo, &["show", "--format=", hash, "--", path]).unwrap_or_default()
+}
+
+pub fn cherry_pick(repo: &Path, hash: &str) -> Result<String, String> {
+    run(repo, &["cherry-pick", hash])
+}
+
+pub fn revert(repo: &Path, hash: &str) -> Result<String, String> {
+    run(repo, &["revert", "--no-edit", hash])
+}
+
+/// `mode` is soft, mixed or hard.
+pub fn reset_to(repo: &Path, hash: &str, mode: &str) -> Result<String, String> {
+    run(repo, &["reset", &format!("--{mode}"), hash])
 }

@@ -13,8 +13,16 @@ impl FileChange {
         self.index != ' ' && self.index != '?'
     }
 
+    /// Unmerged path (merge, rebase, cherry-pick or revert conflict).
+    pub fn conflicted(&self) -> bool {
+        matches!((self.index, self.work), ('D', 'D') | ('A', 'A')) || self.index == 'U' || self.work == 'U'
+    }
+
     /// One letter badge like GitHub Desktop.
     pub fn badge(&self) -> char {
+        if self.conflicted() {
+            return '!';
+        }
         if self.work == '?' {
             return 'A';
         }

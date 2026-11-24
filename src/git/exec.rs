@@ -55,3 +55,20 @@ pub fn run_stdin(repo: &Path, args: &[&str], input: &str) -> Result<String, Stri
         Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
     }
 }
+
+/// Run git with extra environment variables (used for non-interactive rebases).
+pub fn run_env(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<String, String> {
+    let mut cmd = Command::new("git");
+    cmd.arg("-C").arg(repo).args(args);
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    let out = cmd.output().map_err(|e| format!("cannot run git: {e}"))?;
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+    } else {
+        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        let o = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        Err(if err.is_empty() { o } else { err })
+    }
+}
