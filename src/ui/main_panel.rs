@@ -169,9 +169,10 @@ impl App {
                 });
             } else if changes && !stash_view && !conflicted {
                 let label = if self.diff_staged { "Unstage hunk" } else { "Stage hunk" };
-                events = draw_diff(ui, lines, &p, self.settings.diff_font, Some(&self.sel_lines), label);
+                events = draw_diff(ui, lines, &p, self.settings.diff_font, Some(&self.sel_lines), label, self.selected_file.as_deref().unwrap_or(""));
             } else {
-                draw_diff(ui, lines, &p, self.settings.diff_font, None, "");
+                let file = if self.tab == Tab::History { self.selected_commit_file.as_deref() } else { self.selected_file.as_deref() };
+                draw_diff(ui, lines, &p, self.settings.diff_font, None, "", file.unwrap_or(""));
             }
         });
 

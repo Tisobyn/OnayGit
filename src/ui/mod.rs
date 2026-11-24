@@ -17,6 +17,7 @@ pub mod publish;
 pub mod shell;
 pub mod stash;
 pub mod switcher;
+pub mod syntax;
 pub mod theme;
 pub mod tips;
 pub mod toolbar;

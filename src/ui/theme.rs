@@ -230,3 +230,19 @@ pub fn apply_visuals(ctx: &egui::Context, theme: Theme) {
         s.spacing.scroll.floating = true;
     });
 }
+
+/// Syntax colour for a token kind, tuned for light and dark backgrounds.
+pub fn syntax_color(dark: bool, tok: crate::ui::syntax::Tok, plain: Color32) -> Color32 {
+    use crate::ui::syntax::Tok::*;
+    let (d, l) = match tok {
+        Plain => return plain,
+        Keyword => ((255, 123, 114), (207, 34, 46)),
+        Str => ((165, 214, 255), (10, 48, 105)),
+        Comment => ((139, 148, 158), (110, 119, 129)),
+        Number => ((121, 192, 255), (5, 80, 174)),
+        Func => ((210, 168, 255), (130, 80, 223)),
+        Type => ((255, 166, 87), (149, 56, 0)),
+    };
+    let c = if dark { d } else { l };
+    Color32::from_rgb(c.0, c.1, c.2)
+}

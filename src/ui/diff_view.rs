@@ -60,6 +60,7 @@ pub fn draw_diff(
     size: f32,
     selection: Option<&HashSet<usize>>,
     hunk_label: &str,
+    file: &str,
 ) -> Vec<DiffEvent> {
     let mut events = Vec::new();
     let font = FontId::monospace(size);
@@ -73,12 +74,20 @@ pub fn draw_diff(
     let content_w = (text_x + cw * (max_chars as f32 + 4.0)).max(ui.available_width());
     let btn_w = cw * (hunk_label.chars().count() as f32 + 3.0);
 
+    let default_lang = crate::ui::syntax::lang_of(file);
     egui::ScrollArea::both()
         .auto_shrink([false, false])
         .show_rows(ui, row_h, lines.len(), |ui, range| {
             ui.spacing_mut().item_spacing.y = 0.0;
+            // Language of the file this range starts in, and any comment left open above it.
+            let mut lang = lines[..range.start].iter().rev().find(|l| l.kind == Kind::File).map(|l| crate::ui::syntax::lang_of(&l.text)).unwrap_or(default_lang);
+            let mut in_block = false;
             for idx in range {
                 let l = &lines[idx];
+                if l.kind == Kind::File {
+                    lang = crate::ui::syntax::lang_of(&l.text);
+                    in_block = false;
+                }
                 let (rect, resp) = ui.allocate_exact_size(egui::vec2(content_w, row_h), Sense::click());
                 let painter = ui.painter().clone();
                 let cy = rect.center().y;
@@ -224,13 +233,23 @@ pub fn draw_diff(
                             let hl = egui::Rect::from_min_max(egui::pos2(x0, rect.min.y + 1.0), egui::pos2(x0 + cw * (b - a) as f32, rect.max.y - 1.0));
                             painter.rect_filled(hl, 2.0, c);
                         }
-                        painter.text(
-                            egui::pos2(rect.min.x + text_x, cy),
-                            Align2::LEFT_CENTER,
-                            &l.text,
-                            font.clone(),
-                            p.text,
-                        );
+                        let dark = p.bg.r() < 128;
+                        let spans = crate::ui::syntax::highlight(lang, &l.text, &mut in_block);
+                        let mut job = LayoutJob::default();
+                        let mut at = 0;
+                        let mut push = |job: &mut LayoutJob, text: &str, color: Color32| {
+                            if !text.is_empty() {
+                                job.append(text, 0.0, TextFormat { font_id: font.clone(), color, ..Default::default() });
+                            }
+                        };
+                        for (r, t) in &spans {
+                            push(&mut job, &l.text[at..r.start], p.text);
+                            push(&mut job, &l.text[r.clone()], syntax_color(dark, *t, p.text));
+                            at = r.end;
+                        }
+                        push(&mut job, &l.text[at..], p.text);
+                        let galley = painter.layout_job(job);
+                        painter.galley(egui::pos2(rect.min.x + text_x, cy - galley.size().y / 2.0), galley, p.text);
                     }
                 }
             }
