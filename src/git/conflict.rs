@@ -77,7 +77,7 @@ pub fn mark_resolved(repo: &Path, path: &str) -> Result<(), String> {
 
 /// The conflicted file as lines: marker lines are hunks, "ours" is red, "theirs" is green.
 pub fn conflict_lines(repo: &Path, path: &str) -> Vec<DiffLine> {
-    let text = std::fs::read_to_string(repo.join(path)).unwrap_or_default();
+    let text = read_file(repo, path);
     let (mut region, mut out) = (0u8, Vec::new());
     for (i, line) in text.lines().enumerate() {
         let n = Some(i as u32 + 1);

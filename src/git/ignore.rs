@@ -3,11 +3,11 @@
 use super::*;
 
 pub fn read_ignore(repo: &Path) -> String {
-    std::fs::read_to_string(repo.join(".gitignore")).unwrap_or_default()
+    read_file(repo, ".gitignore")
 }
 
 pub fn write_ignore(repo: &Path, text: &str) -> Result<(), String> {
-    std::fs::write(repo.join(".gitignore"), text).map_err(|e| e.to_string())
+    write_file(repo, ".gitignore", text)
 }
 
 /// Append a pattern to `.gitignore` unless it is already there.
