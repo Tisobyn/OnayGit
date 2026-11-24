@@ -159,6 +159,7 @@ pub struct App {
     pub tip: usize,
     pub tasks: HashSet<String>,
     pub tree_view: bool,
+    pub system_dark: bool,
     pub acct_adding: bool,
     pub acct_cli: bool,
     pub launcher_msg: String,
@@ -288,6 +289,7 @@ impl App {
             repo_styles: tabs::load_styles(),
             tip: 0,
             tasks: HashSet::new(),
+            system_dark: true,
             tree_view: false,
             acct_adding: false,
             acct_cli: false,
@@ -356,7 +358,25 @@ impl App {
         // Handy for screenshots: ONAYGIT_SCREEN=home|settings
         match std::env::var("ONAYGIT_SCREEN").as_deref() {
             Ok("home") => app.screen = Screen::Home,
-            Ok("settings") => app.open_settings(),
+            Ok(s) if s.starts_with("settings") => {
+                app.open_settings();
+                app.section = match s.strip_prefix("settings:").unwrap_or("") {
+                    "spaces" => Section::Spaces,
+                    "appearance" => Section::Appearance,
+                    "keybinds" => Section::Keybinds,
+                    "privacy" => Section::Privacy,
+                    "accounts" => Section::Accounts,
+                    "git" => Section::Git,
+                    "editor" => Section::Editor,
+                    "ai" => Section::Ai,
+                    "help" => Section::Help,
+                    "remotes" => Section::Remotes,
+                    "repostyle" => Section::RepoStyle,
+                    "identity" => Section::Identity,
+                    "ignore" => Section::Ignore,
+                    _ => app.section,
+                };
+            }
             Ok("repo") => {
                 if let Some(r) = app.repos.first().cloned() {
                     app.open_repo(r);
@@ -367,8 +387,20 @@ impl App {
         app
     }
 
+    /// The theme in use now. With Auto it follows the system and keeps the chosen family.
+    pub fn theme_now(&self) -> Theme {
+        let t = self.settings.theme;
+        if !self.settings.auto_theme || t.is_dark() == self.system_dark {
+            t
+        } else if self.system_dark {
+            Theme::Dark
+        } else {
+            Theme::Light
+        }
+    }
+
     pub fn pal(&self) -> Pal {
-        pal(self.settings.theme)
+        pal(self.theme_now())
     }
 
     pub fn repo(&self) -> Option<PathBuf> {
@@ -378,14 +410,28 @@ impl App {
 
 impl eframe::App for App {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        let c = pal(self.settings.theme).chrome;
+        let c = self.pal().chrome;
         c.to_normalized_gamma_f32()
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let before = self.settings.clone();
+        if let Some(t) = ctx.input(|i| i.raw.system_theme) {
+            self.system_dark = t == egui::Theme::Dark;
+        }
         set_accent(self.settings.accent);
-        apply_visuals(ctx, self.settings.theme);
+        apply_visuals(ctx, self.theme_now());
+        ctx.style_mut(|st| {
+            st.animation_time = if self.settings.smooth { 1.0 / 12.0 } else { 0.0 };
+            if !self.settings.scrollbars {
+                st.spacing.scroll.bar_width = 0.0;
+                st.spacing.scroll.floating_width = 0.0;
+                st.spacing.scroll.bar_inner_margin = 0.0;
+                st.spacing.scroll.bar_outer_margin = 0.0;
+            } else {
+                st.spacing.scroll = egui::style::ScrollStyle::floating();
+            }
+        });
 
         while let Ok((label, res)) = self.rx.try_recv() {
             if self.handle_task_result(&label, &res) {

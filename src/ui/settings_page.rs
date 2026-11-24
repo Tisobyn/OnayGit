@@ -201,39 +201,85 @@ impl App {
     }
 
     fn appearance_page(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Appearance", "Theme, accent color and text size.", |_| {});
+        page_header(ui, p, "Appearance", "Theme, text and interface.", |_| {});
         settings_group(ui, p, "Theme", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
+                let w = (ui.available_width() - 16.0) / 3.0;
                 ui.horizontal(|ui| {
-                    for t in Theme::ALL {
-                        let icon = if matches!(t, Theme::Light | Theme::Sand) { "contrast" } else { "palette" };
-                        if choice_tile(ui, p, icon, t.label(), self.settings.theme == t, 96.0).clicked() {
+                    ui.spacing_mut().item_spacing.x = 8.0;
+                    for (label, key) in [("Light", 0), ("Dark", 1), ("Auto", 2)] {
+                        let on = match key {
+                            2 => self.settings.auto_theme,
+                            0 => !self.settings.auto_theme && !self.settings.theme.is_dark(),
+                            _ => !self.settings.auto_theme && self.settings.theme.is_dark(),
+                        };
+                        let preview = match key {
+                            0 => pal(Theme::Light),
+                            1 => pal(Theme::Dark),
+                            _ => pal(self.theme_now()),
+                        };
+                        if theme_tile(ui, p, &preview, label, on, w).clicked() {
+                            match key {
+                                0 => {
+                                    self.settings.auto_theme = false;
+                                    self.settings.theme = Theme::Light;
+                                }
+                                1 => {
+                                    self.settings.auto_theme = false;
+                                    self.settings.theme = Theme::Dark;
+                                }
+                                _ => self.settings.auto_theme = true,
+                            }
+                        }
+                    }
+                });
+                ui.add_space(6.0);
+                ui.label(RichText::new("More themes").size(12.0).color(p.muted));
+                ui.horizontal_wrapped(|ui| {
+                    for t in [Theme::Midnight, Theme::Nord, Theme::Sand] {
+                        if ui.selectable_label(self.settings.theme == t && !self.settings.auto_theme, t.label()).clicked() {
+                            self.settings.auto_theme = false;
                             self.settings.theme = t;
                         }
                     }
                 });
             });
         });
-        settings_group(ui, p, "Accent color", "", |_| {}, |ui| {
+        settings_group(ui, p, "Interface", "", |_| {}, |ui| {
+            group_row(ui, p, |ui| {
+                toggle_row(ui, p, "Pane scrollbars", "Show scrollbars in lists, previews and output panes.", &mut self.settings.scrollbars);
+            });
+            group_row(ui, p, |ui| {
+                toggle_row(ui, p, "Smooth transitions", "Animate tab selection and theme colors. Turn off for instant changes.", &mut self.settings.smooth);
+            });
             group_row(ui, p, |ui| {
                 ui.horizontal(|ui| {
-                    for (i, (name, color)) in ACCENTS.iter().enumerate() {
-                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
-                        ui.painter().circle_filled(rect.center(), 11.0, *color);
-                        if self.settings.accent == i {
-                            paint_icon(ui, "check", rect.shrink(6.0), Color32::WHITE);
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Accent color").size(13.5).color(p.text));
+                        ui.label(RichText::new("Used for buttons and selection.").size(12.0).color(p.muted));
+                    });
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        for (i, (name, color)) in ACCENTS.iter().enumerate().rev() {
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), Sense::click());
+                            ui.painter().circle_filled(rect.center(), 9.0, *color);
+                            if self.settings.accent == i {
+                                paint_icon(ui, "check", rect.shrink(5.0), Color32::WHITE);
+                            }
+                            if resp.on_hover_text(*name).clicked() {
+                                self.settings.accent = i;
+                            }
                         }
-                        if resp.on_hover_text(*name).clicked() {
-                            self.settings.accent = i;
-                        }
-                    }
+                    });
                 });
             });
         });
-        settings_group(ui, p, "Text and size", "", |_| {}, |ui| {
+        settings_group(ui, p, "Text", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Diff font size").color(p.text));
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Font size").size(13.5).color(p.text));
+                        ui.label(RichText::new("Text size in the diff view.").size(12.0).color(p.muted));
+                    });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.add(egui::Slider::new(&mut self.settings.diff_font, 10.0..=18.0));
                     });
@@ -241,7 +287,10 @@ impl App {
             });
             group_row(ui, p, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Interface zoom").color(p.text));
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Interface zoom").size(13.5).color(p.text));
+                        ui.label(RichText::new("Scale the whole app.").size(12.0).color(p.muted));
+                    });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let r = ui.add(egui::Slider::new(&mut self.settings.zoom, 0.8..=1.5));
                         if r.drag_stopped() || (r.changed() && !r.dragged()) {
@@ -554,4 +603,41 @@ fn toggle_launcher(bin: &Path, installed: bool, system: bool) -> Result<String, 
     }
     std::os::unix::fs::symlink(exe, bin).map_err(|e| e.to_string())?;
     Ok(format!("Installed at {}", bin.display()))
+}
+
+fn toggle_row(ui: &mut egui::Ui, p: &Pal, label: &str, desc: &str, value: &mut bool) {
+    ui.horizontal(|ui| {
+        ui.vertical(|ui| {
+            ui.label(RichText::new(label).size(13.5).color(p.text));
+            ui.label(RichText::new(desc).size(12.0).color(p.muted));
+        });
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.checkbox(value, "");
+        });
+    });
+}
+
+/// Mini window drawing used as a theme choice, like 1git's theme previews.
+fn theme_tile(ui: &mut egui::Ui, p: &Pal, c: &Pal, label: &str, selected: bool, w: f32) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(w, 124.0), Sense::click());
+    let prev = egui::Rect::from_min_size(rect.min + egui::vec2(8.0, 8.0), egui::vec2(w - 16.0, 76.0));
+    let pt = ui.painter();
+    pt.rect_filled(prev, 4.0, c.input);
+    pt.rect_stroke(prev, 4.0, egui::Stroke::new(1.0_f32, c.border));
+    pt.rect_filled(egui::Rect::from_min_size(prev.min + egui::vec2(6.0, 6.0), egui::vec2(prev.width() * 0.5, 4.0)), 2.0, c.muted);
+    let body = egui::Rect::from_min_max(prev.min + egui::vec2(6.0, 14.0), prev.max - egui::vec2(6.0, 6.0));
+    let side = egui::Rect::from_min_size(body.min, egui::vec2(body.width() * 0.24, body.height()));
+    pt.rect_filled(side, 2.0, c.hover);
+    let main = egui::Rect::from_min_max(egui::pos2(side.max.x + 4.0, body.min.y), body.max);
+    pt.rect_filled(main, 2.0, c.bg);
+    for (i, f) in [0.6, 0.85, 0.45].iter().enumerate() {
+        let y = main.min.y + 8.0 + i as f32 * 7.0;
+        pt.rect_filled(egui::Rect::from_min_size(egui::pos2(main.min.x + 8.0, y), egui::vec2((main.width() - 16.0) * f, 3.0)), 2.0, c.muted);
+    }
+    let col = if selected { accent() } else { p.text };
+    pt.text(egui::pos2(rect.center().x, rect.max.y - 16.0), Align2::CENTER_CENTER, label, FontId::proportional(13.0), col);
+    if selected {
+        pt.rect_stroke(rect.shrink(1.0), 8.0, egui::Stroke::new(1.0_f32, accent()));
+    }
+    resp
 }

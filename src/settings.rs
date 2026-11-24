@@ -5,6 +5,10 @@ use crate::prelude::*;
 #[derive(Clone, PartialEq)]
 pub struct Settings {
     pub theme: Theme,
+    /// Follow the system light/dark setting.
+    pub auto_theme: bool,
+    pub scrollbars: bool,
+    pub smooth: bool,
     pub accent: usize,
     pub tips: bool,
     pub onboarded: bool,
@@ -19,6 +23,9 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             theme: Theme::Dark,
+            auto_theme: false,
+            scrollbars: true,
+            smooth: true,
             accent: 0,
             tips: true,
             onboarded: false,
@@ -50,6 +57,9 @@ impl Settings {
             let Some((k, v)) = line.split_once('=') else { continue };
             match k {
                 "dark" => s.theme = if v == "true" { Theme::Dark } else { Theme::Light },
+                "scrollbars" => s.scrollbars = v == "true",
+                "smooth" => s.smooth = v == "true",
+                "auto_theme" => s.auto_theme = v == "true",
                 "theme" => s.theme = Theme::from_key(v).unwrap_or(Theme::Dark),
                 "accent" => s.accent = v.parse().unwrap_or(0),
                 "tips" => s.tips = v != "false",
@@ -70,8 +80,11 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\n",
             self.theme.key(),
+            self.auto_theme,
+            self.scrollbars,
+            self.smooth,
             self.accent,
             self.tips,
             self.onboarded,
