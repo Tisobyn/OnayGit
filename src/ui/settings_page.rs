@@ -68,7 +68,7 @@ impl App {
             .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 24.0, right: 32.0, top: 20.0, bottom: 20.0 }))
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                    ui.set_max_width(460.0);
+                    ui.set_max_width(580.0);
                     match self.section {
                         Section::Application => self.application_page(ui, &p),
                         Section::Spaces => self.spaces_page(ui, &p),
