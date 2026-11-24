@@ -39,16 +39,25 @@ impl App {
         } else {
             self.acct_host.trim().to_string()
         };
+        let cli = self.acct_cli && provider == git::Provider::GitHub;
         let token = self.acct_token.trim().to_string();
-        if token.is_empty() {
+        if token.is_empty() && !cli {
             return;
         }
         self.pending_account = Some((provider, host.clone(), token.clone()));
-        self.spawn_task(ctx, T_SIGN_IN, move || git::whoami(provider, &host, &token));
+        self.spawn_task(ctx, T_SIGN_IN, move || {
+            let token = if cli { git::gh_cli_token(&host)? } else { token };
+            let user = git::whoami(provider, &host, &token)?;
+            Ok(format!("{user}\u{1f}{token}"))
+        });
     }
 
-    pub fn finish_sign_in(&mut self, user: &str) {
+    pub fn finish_sign_in(&mut self, result: &str) {
         let Some((provider, host, token)) = self.pending_account.take() else { return };
+        let (user, token) = match result.split_once('\u{1f}') {
+            Some((u, t)) => (u, t.to_string()),
+            None => (result, token),
+        };
         let acc = git::Account { provider, host, user: user.to_string() };
         match git::secret_set(&acc.secret_name(), &token) {
             Ok(()) => {
@@ -56,6 +65,7 @@ impl App {
                 self.accounts.push(acc);
                 self.save_accounts();
                 self.acct_token.clear();
+                self.acct_adding = false;
                 self.status_msg.clear();
             }
             Err(e) => self.status_msg = format!("Could not save the token in the Keychain: {e}"),

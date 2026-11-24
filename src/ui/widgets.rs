@@ -174,3 +174,84 @@ pub fn status_badge(ui: &mut egui::Ui, badge: char) {
     ui.painter().rect_stroke(rect.shrink(0.5), 3.0, egui::Stroke::new(1.2_f32, color));
     ui.painter().text(rect.center(), Align2::CENTER_CENTER, mark, FontId::proportional(11.0), color);
 }
+
+fn tint(p: &Pal) -> Color32 {
+    let mix = |a: u8, b: u8| ((a as u16 * 2 + b as u16) / 3) as u8;
+    Color32::from_rgb(mix(p.bg.r(), p.hover.r()), mix(p.bg.g(), p.hover.g()), mix(p.bg.b(), p.hover.b()))
+}
+
+/// Settings card in the style of 1git: bordered, tinted heading, rows divided by lines.
+pub fn settings_group(
+    ui: &mut egui::Ui,
+    p: &Pal,
+    title: &str,
+    meta: &str,
+    header: impl FnOnce(&mut egui::Ui),
+    rows: impl FnOnce(&mut egui::Ui),
+) {
+    let r = egui::Rounding::same(10.0);
+    egui::Frame::none().stroke(egui::Stroke::new(1.0_f32, p.border)).rounding(r).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.spacing_mut().item_spacing.y = 0.0;
+        egui::Frame::none()
+            .fill(tint(p))
+            .rounding(egui::Rounding { nw: 10.0, ne: 10.0, sw: 0.0, se: 0.0 })
+            .inner_margin(egui::Margin::symmetric(16.0, 10.0))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(title).size(13.5).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        header(ui);
+                        if !meta.is_empty() {
+                            ui.label(RichText::new(meta).size(12.0).color(p.muted));
+                        }
+                    });
+                });
+            });
+        rows(ui);
+    });
+    ui.add_space(16.0);
+}
+
+/// One row inside a `settings_group`, with a divider on top.
+pub fn group_row(ui: &mut egui::Ui, p: &Pal, add: impl FnOnce(&mut egui::Ui)) {
+    let top = ui.cursor().min.y;
+    let x0 = ui.cursor().min.x;
+    let w = ui.available_width();
+    ui.painter().hline(x0..=x0 + w, top, egui::Stroke::new(1.0_f32, p.border));
+    egui::Frame::none().inner_margin(egui::Margin::symmetric(16.0, 9.0)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.spacing_mut().item_spacing.y = 3.0;
+        add(ui);
+    });
+}
+
+/// Page header: title, optional description and an action on the right.
+pub fn page_header(ui: &mut egui::Ui, p: &Pal, title: &str, desc: &str, action: impl FnOnce(&mut egui::Ui)) {
+    ui.horizontal(|ui| {
+        ui.label(RichText::new(title).size(17.0).color(p.text));
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), action);
+    });
+    if !desc.is_empty() {
+        ui.label(RichText::new(desc).size(12.5).color(p.muted));
+    }
+    ui.add_space(14.0);
+}
+
+/// Label above a field.
+pub fn field_label(ui: &mut egui::Ui, p: &Pal, text: &str) {
+    ui.add_space(4.0);
+    ui.label(RichText::new(text).size(13.0).color(p.text));
+}
+
+/// Big selectable tile (icon above text), used for provider and method choices.
+pub fn choice_tile(ui: &mut egui::Ui, p: &Pal, icon_name: &str, text: &str, selected: bool, w: f32) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(w, 62.0), Sense::click());
+    let fill = if selected { p.hover } else { Color32::TRANSPARENT };
+    ui.painter().rect_filled(rect, 8.0, fill);
+    ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, if selected { accent() } else { p.border }));
+    paint_icon(ui, icon_name, egui::Rect::from_center_size(rect.center() - egui::vec2(0.0, 11.0), egui::vec2(18.0, 18.0)), p.muted);
+    ui.painter().text(rect.center() + egui::vec2(0.0, 15.0), Align2::CENTER_CENTER, text, FontId::proportional(12.5), p.text);
+    resp
+}

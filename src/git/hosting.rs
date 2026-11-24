@@ -133,6 +133,20 @@ fn call(provider: Provider, host: &str, token: &str, method: &str, path: &str, b
 }
 
 /// Check the token and return the user name.
+/// Token of the signed-in GitHub CLI (`gh auth token`).
+pub fn gh_cli_token(host: &str) -> Result<String, String> {
+    let out = std::process::Command::new("gh")
+        .args(["auth", "token", "--hostname", host])
+        .output()
+        .map_err(|_| "The GitHub CLI (gh) is not installed".to_string())?;
+    let t = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if out.status.success() && !t.is_empty() {
+        Ok(t)
+    } else {
+        Err("Sign in first with: gh auth login".to_string())
+    }
+}
+
 pub fn whoami(provider: Provider, host: &str, token: &str) -> Result<String, String> {
     let v = call(provider, host, token, "GET", "/user", None)?;
     let key = if provider == Provider::GitHub { "login" } else { "username" };
