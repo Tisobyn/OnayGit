@@ -180,8 +180,7 @@ src/
     icons.rs         Phosphor icons from 1git (assets/icons)
     tabs.rs          tab bar and Cmd+T / Cmd+W
     settings_repo.rs Remotes and repository appearance pages
-    tips.rs          welcome window and tip boxes
-    tour.rs          guided tour (three tips next to real controls)
+    welcome.rs       first-run welcome window
     clone.rs         full-page Clone (account repositories or URL)
     syntax.rs        small syntax highlighter for diffs
     shell.rs         window frame: title bar tabs, left rail, rounded card
@@ -189,7 +188,7 @@ src/
     accounts_page.rs Accounts and AI settings pages
     publish.rs       Publish, Pull requests, Add machine, machine view
 assets/              app icon (from 1git)
-PORTING.md           list of 1git features and what is done
+docs/                notes: TODO, AUDIT, REVIEW, TEST_REPORT, PORTING, CHANGELOG
 ```
 
 Rule of thumb: git commands live in `git/`, drawing lives in `ui/`, state lives in `app/`.

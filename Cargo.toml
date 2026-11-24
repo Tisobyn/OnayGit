@@ -26,4 +26,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 opt-level = "s"
 lto = "fat"
 codegen-units = 1
-strip = "symbols"
+strip = "none"
+
+[profile.release.build-override]
+strip = "none"

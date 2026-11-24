@@ -173,14 +173,6 @@ impl App {
             });
             group_row(ui, p, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Guided tips").color(p.text));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.checkbox(&mut self.settings.tips, "");
-                    });
-                });
-            });
-            group_row(ui, p, |ui| {
-                ui.horizontal(|ui| {
                     ui.label(RichText::new("Welcome window").color(p.text));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Show again").clicked() {
@@ -1233,7 +1225,6 @@ impl App {
         let mut url: Option<&str> = None;
         settings_group(ui, p, "Getting started", "", |_| {}, |ui| {
             for (title, desc, button) in [
-                ("Guided tips", "Rediscover shortcuts and workspace features.", "Show again"),
                 ("First-run setup", "", "Run setup again"),
             ] {
                 group_row(ui, p, |ui| {
@@ -1246,13 +1237,7 @@ impl App {
                         });
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.button(button).clicked() {
-                                if title == "Guided tips" {
-                                    self.settings.tips = true;
-                                    self.settings.tour = 0;
-                                    self.settings.tour_skipped = false;
-                                } else {
-                                    self.settings.onboarded = false;
-                                }
+                                self.settings.onboarded = false;
                             }
                         });
                     });

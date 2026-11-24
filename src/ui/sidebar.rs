@@ -331,10 +331,6 @@ impl App {
                                 ui.vertical_centered(|ui| {
                                     ui.label(RichText::new("No local changes").color(p.muted));
                                 });
-                                ui.horizontal(|ui| {
-                                    ui.add_space(8.0);
-                                    ui.vertical(|ui| tip_box(ui, &p, self.settings.tips, &mut self.tip));
-                                });
                             }
                         });
                     }
@@ -371,13 +367,21 @@ impl App {
                 }
                 let (subject, body) = self.commit_parts();
                 let body = git::with_coauthors(&body, &self.chosen_coauthors());
-                let r = if self.amend { git::amend(&repo, &subject, &body) } else { git::commit(&repo, &subject, &body) };
-                if self.report(r) {
-                    self.summary.clear();
-                    self.amend = false;
-                    self.status_msg.clear();
+                // Hooks can be slow, so commit on a thread. The message is cleared when it succeeds.
+                let mut args: Vec<&str> = vec!["commit"];
+                if self.amend {
+                    args.push("--amend");
+                    if subject.is_empty() {
+                        args.push("--no-edit");
+                    }
                 }
-                self.refresh();
+                if !subject.is_empty() {
+                    args.extend(["-m", &subject]);
+                    if !body.trim().is_empty() {
+                        args.extend(["-m", &body]);
+                    }
+                }
+                self.spawn_in(ctx, repo, "Committing", &args);
             }
         }
         if do_undo {

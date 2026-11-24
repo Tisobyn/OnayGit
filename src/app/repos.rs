@@ -53,19 +53,36 @@ impl App {
         self.refresh();
     }
 
-    /// Timer refresh: only status, branch and the open diff. The full reload (history, graph,
-    /// tags, stashes, worktrees) runs only when HEAD moved or the branch changed.
-    pub fn refresh_auto(&mut self) {
+    /// Timer check. Git runs on a thread, so a slow disk or a far SSH host never freezes the UI.
+    pub fn poll_repo(&mut self, ctx: &egui::Context) {
         let Some(repo) = self.repo() else { return };
         self.last_refresh = Instant::now();
-        let head = git::run(&repo, &["rev-parse", "HEAD"]).unwrap_or_default().trim().to_string();
-        let branch = git::current_branch(&repo);
-        if head != self.head_seen || branch != self.branch {
+        self.polling = true;
+        let tx = self.snap_tx.clone();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let head = git::run(&repo, &["rev-parse", "HEAD"]).unwrap_or_default().trim().to_string();
+            let branch = git::current_branch(&repo);
+            let files = git::status(&repo);
+            let ahead_behind = git::ahead_behind(&repo);
+            let _ = tx.send(Snap { repo, head, branch, files, ahead_behind });
+            ctx.request_repaint();
+        });
+    }
+
+    /// Use a timer check. If HEAD or the branch moved, do the full reload. The full reload (history, graph,
+    /// tags, stashes, worktrees) runs only then.
+    pub fn apply_snap(&mut self, snap: Snap) {
+        let Some(repo) = self.repo() else { return };
+        if repo != snap.repo || self.busy.is_some() {
+            return;
+        }
+        if snap.head != self.head_seen || snap.branch != self.branch {
             self.refresh();
             return;
         }
-        self.files = git::status(&repo);
-        self.ahead_behind = git::ahead_behind(&repo);
+        self.files = snap.files;
+        self.ahead_behind = snap.ahead_behind;
         self.selected_file = self
             .selected_file
             .clone()

@@ -89,6 +89,15 @@ pub struct RepoInfo {
     pub owner: String,
 }
 
+/// What a background timer check found.
+pub struct Snap {
+    pub repo: PathBuf,
+    pub head: String,
+    pub branch: String,
+    pub files: Vec<git::FileChange>,
+    pub ahead_behind: Option<(u32, u32)>,
+}
+
 pub type Done = (String, Result<String, String>);
 
 pub struct App {
@@ -132,9 +141,6 @@ pub struct App {
     pub diff: Vec<DiffLine>,
     pub summary: String,
     pub filter_open: bool,
-    /// Where the guided tour points: branch button, new-branch item, space button.
-    pub tour_rects: [Option<egui::Rect>; 3],
-    pub tour_space: Option<usize>,
     pub focus_filter: bool,
     pub commit_now: bool,
     /// Co-author choices: person and whether it is on for the next commit.
@@ -193,7 +199,6 @@ pub struct App {
     /// Tabs of the other spaces.
     pub space_tabs: std::collections::HashMap<String, Vec<PathBuf>>,
     pub repo_styles: HashMap<PathBuf, RepoStyle>,
-    pub tip: usize,
     pub tasks: HashSet<String>,
     /// Profile picture files by lowercase email; `None` when there is none.
     pub avatars: HashMap<String, Option<PathBuf>>,
@@ -291,6 +296,10 @@ pub struct App {
     pub tx: Sender<Done>,
     pub rx: Receiver<Done>,
     pub last_refresh: Instant,
+    pub snap_tx: Sender<Snap>,
+    pub snap_rx: Receiver<Snap>,
+    /// A timer check is running on a thread.
+    pub polling: bool,
     /// HEAD commit at the last full refresh.
     pub head_seen: String,
     /// How many commits History and Graph load. Grows by 300 with "Load more".
@@ -314,6 +323,7 @@ impl App {
         cc.egui_ctx.set_zoom_factor(settings.zoom);
 
         let (tx, rx) = channel();
+        let (snap_tx, snap_rx) = channel();
         let repos = load_repos();
         let mut app = App {
             settings,
@@ -350,8 +360,6 @@ impl App {
             diff: vec![],
             summary: String::new(),
             filter_open: false,
-            tour_rects: [None; 3],
-            tour_space: None,
             focus_filter: false,
             commit_now: false,
             coauthors: coauthors::load(),
@@ -406,7 +414,6 @@ impl App {
             tabs_space: String::new(),
             space_tabs: Default::default(),
             repo_styles: tabs::load_styles(),
-            tip: 0,
             tasks: HashSet::new(),
             avatars: HashMap::new(),
             system_dark: true,
@@ -496,6 +503,9 @@ impl App {
             tx,
             rx,
             last_refresh: Instant::now(),
+            snap_tx,
+            snap_rx,
+            polling: false,
             head_seen: String::new(),
             log_limit: 300,
             show_big_diff: 0,
@@ -670,6 +680,11 @@ impl eframe::App for App {
                     if label == "Fetching" || label == "Pulling" || label == "Pushing" || label == "Publishing" {
                         self.last_fetched = Some(Instant::now());
                     }
+                    if label == "Committing" {
+                        self.summary.clear();
+                        self.amend = false;
+                        self.status_msg.clear();
+                    }
                     if label == "Cloning" {
                         if let Some(p) = self.pending_clone.take() {
                             self.open_repo(p);
@@ -688,8 +703,12 @@ impl eframe::App for App {
         if self.repo().is_some_and(|r| git::is_remote(&r)) {
             every = every.max(Duration::from_secs(20));
         }
-        if self.screen == Screen::Repo && self.last_refresh.elapsed() > every && self.busy.is_none() {
-            self.refresh_auto();
+        while let Ok(snap) = self.snap_rx.try_recv() {
+            self.polling = false;
+            self.apply_snap(snap);
+        }
+        if self.screen == Screen::Repo && self.last_refresh.elapsed() > every && self.busy.is_none() && !self.polling {
+            self.poll_repo(ctx);
         }
         ctx.request_repaint_after(every);
 
@@ -745,7 +764,6 @@ impl eframe::App for App {
             }
         }
 
-        self.tour_layer(ctx);
         self.paint_corners(ctx);
         self.paint_grain(ctx);
 

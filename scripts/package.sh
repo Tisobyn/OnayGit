@@ -11,6 +11,7 @@ cargo build --release
 
 rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp target/release/OnayGit "$APP/Contents/MacOS/OnayGit"
+strip -x "$APP/Contents/MacOS/OnayGit"
 
 # Icon: 512 px PNG -> .icns
 ICONSET=dist/OnayGit.iconset

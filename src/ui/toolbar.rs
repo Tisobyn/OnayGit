@@ -6,7 +6,6 @@ pub type SyncInfo = (&'static str, String, String, Option<(&'static str, Vec<Str
 
 impl App {
     pub fn toolbar(&mut self, ctx: &egui::Context) {
-        self.tour_rects[1] = None;
         let p = self.pal();
         let mut goto_settings = false;
         let rstyle = self.repo().map(|r| self.style_of(&r));
@@ -49,7 +48,6 @@ impl App {
                         toggle = Some(TbMenu::Branch);
                     }
                     cells[1] = egui::Rect::from_min_max(egui::pos2(b0.x - 30.0, ui.max_rect().top()), egui::pos2(ui.cursor().left() + 20.0, ui.max_rect().bottom()));
-                    self.tour_rects[0] = Some(cells[1]);
                     toolbar_divider(ui);
 
                     // Worktrees

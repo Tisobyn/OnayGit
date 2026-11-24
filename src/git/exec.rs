@@ -24,6 +24,8 @@ pub fn git_command(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Command 
         return ssh_command(&host, &remote);
     }
     let mut cmd = Command::new("git");
+    // Never wait for a password prompt, and never take locks just to read.
+    cmd.env("GIT_TERMINAL_PROMPT", "0").env("GIT_OPTIONAL_LOCKS", "0");
     cmd.arg("-C").arg(repo).args(args);
     for (k, v) in env {
         cmd.env(k, v);

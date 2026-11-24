@@ -146,7 +146,6 @@ impl App {
                             RichText::new("Use Open from disk, Clone, or Scan repositories.")
                                 .color(p.muted),
                         );
-                        ui.allocate_ui(egui::vec2(380.0, 0.0), |ui| tip_box(ui, &p, self.settings.tips, &mut self.tip));
                     });
                     return;
                 }

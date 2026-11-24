@@ -11,7 +11,6 @@ pub struct Settings {
     /// Stage every changed file when committing.
     pub auto_include: bool,
     pub accent: usize,
-    pub tips: bool,
     pub onboarded: bool,
     pub diff_font: f32,
     pub zoom: f32,
@@ -27,9 +26,6 @@ pub struct Settings {
     pub editor: String,
     pub ai: AiConfig,
     pub ai_added: bool,
-    /// Guided tour steps already done (bit per step).
-    pub tour: u8,
-    pub tour_skipped: bool,
 }
 
 impl Default for Settings {
@@ -41,7 +37,6 @@ impl Default for Settings {
             smooth: true,
             auto_include: false,
             accent: 0,
-            tips: true,
             onboarded: false,
             diff_font: 12.0,
             zoom: 1.0,
@@ -56,8 +51,6 @@ impl Default for Settings {
             editor: "open".into(),
             ai: AiConfig::default(),
             ai_added: false,
-            tour: 0,
-            tour_skipped: false,
         }
     }
 }
@@ -87,7 +80,6 @@ impl Settings {
                 "auto_theme" => s.auto_theme = v == "true",
                 "theme" => s.theme = Theme::from_key(v).unwrap_or(Theme::Dark),
                 "accent" => s.accent = v.parse().unwrap_or(0),
-                "tips" => s.tips = v != "false",
                 "onboarded" => s.onboarded = v == "true",
                 "diff_font" => s.diff_font = v.parse().unwrap_or(12.0),
                 "zoom" => s.zoom = v.parse().unwrap_or(1.0),
@@ -103,8 +95,6 @@ impl Settings {
                 "ai_provider" => s.ai.provider = AiProvider::from_key(v).unwrap_or(AiProvider::ClaudeCode),
                 "ai_command" => s.ai.command = v.to_string(),
                 "ai_model" => s.ai.model = v.to_string(),
-                "tour" => s.tour = v.parse().unwrap_or(0),
-                "tour_skipped" => s.tour_skipped = v == "true",
                 "ai_cli_model" => s.ai.cli_model = v.to_string(),
                 "ai_effort" => s.ai.effort = v.to_string(),
                 "ai_plan" => s.ai.plan = v.to_string(),
@@ -120,14 +110,13 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\ntour={}\ntour_skipped={}\nai_cli_model={}\nai_effort={}\nai_plan={}\navatars={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\nai_cli_model={}\nai_effort={}\nai_plan={}\navatars={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
             self.smooth,
             self.auto_include,
             self.accent,
-            self.tips,
             self.onboarded,
             self.diff_font, self.zoom, self.refresh_secs,
             self.editor,
@@ -139,8 +128,6 @@ impl Settings {
             self.ai.name.replace('\n', " "),
             self.ai.instructions.replace('\n', "\\n"),
             self.ui_font, self.code_font, self.grain, self.grain_pattern, self.grain_strength, self.commit_badges,
-            self.tour,
-            self.tour_skipped,
             self.ai.cli_model.replace('\n', " "),
             self.ai.effort,
             self.ai.plan,

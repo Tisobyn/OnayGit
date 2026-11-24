@@ -28,7 +28,7 @@ impl App {
     pub fn load_graph(&mut self) {
         let Some(repo) = self.repo() else { return };
         self.graph_list = git::ref_list(&repo);
-        self.graph_commits = git::log_n(&repo, "--all", self.log_limit);
+        self.graph_commits = git::log_n(&repo, "--exclude=refs/stash --all", self.log_limit);
         let (rows, lanes) = git::graph(&self.graph_commits);
         self.graph_rows = rows;
         self.graph_lanes = lanes;

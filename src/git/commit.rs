@@ -62,14 +62,6 @@ pub fn with_coauthors(body: &str, people: &[Person]) -> String {
     format!("{}{sep}{}", body.trim_end(), lines.join("\n"))
 }
 
-pub fn commit(repo: &Path, summary: &str, desc: &str) -> Result<String, String> {
-    if desc.trim().is_empty() {
-        run(repo, &["commit", "-m", summary])
-    } else {
-        run(repo, &["commit", "-m", summary, "-m", desc])
-    }
-}
-
 #[cfg(test)]
 pub fn log(repo: &Path) -> Vec<Commit> {
     log_range(repo, "HEAD")
@@ -83,7 +75,9 @@ pub fn log_range(repo: &Path, range: &str) -> Vec<Commit> {
 /// The newest `n` commits of a range or ref such as `HEAD` or `--all`.
 pub fn log_n(repo: &Path, range: &str, n: usize) -> Vec<Commit> {
     let max = format!("--max-count={n}");
-    parse_log(&run(repo, &["log", &max, "--topo-order", LOG_FORMAT, range]).unwrap_or_default())
+    let mut args = vec!["log", &max, "--topo-order", LOG_FORMAT];
+    args.extend(range.split_whitespace());
+    parse_log(&run(repo, &args).unwrap_or_default())
 }
 
 const LOG_FORMAT: &str = "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%ae%x1f%(trailers:key=Co-authored-by,valueonly,unfold,separator=%x1e)";
@@ -139,17 +133,6 @@ pub fn last_commit(repo: &Path) -> Option<(String, String)> {
     let out = run(repo, &["log", "-1", "--format=%s%x1f%b"]).ok()?;
     let (s, b) = out.split_once('\x1f')?;
     Some((s.trim().to_string(), b.trim().to_string()))
-}
-
-pub fn amend(repo: &Path, summary: &str, desc: &str) -> Result<String, String> {
-    if summary.is_empty() {
-        return run(repo, &["commit", "--amend", "--no-edit"]);
-    }
-    if desc.trim().is_empty() {
-        run(repo, &["commit", "--amend", "-m", summary])
-    } else {
-        run(repo, &["commit", "--amend", "-m", summary, "-m", desc])
-    }
 }
 
 /// Undo the last commit, keeping its changes staged.

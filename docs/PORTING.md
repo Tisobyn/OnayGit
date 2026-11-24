@@ -30,7 +30,7 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 16. Tabs (several repositories in one window)
 - [x] 17. Remotes settings (list, add, remove, rename)
 - [x] 18. Repository color and icon, themes
-- [x] 19. Guided tips and onboarding
+- [x] 19. Onboarding (guided tips removed later)
 
 ## Hosting and AI
 - [x] 20. GitHub and GitLab accounts
@@ -60,7 +60,7 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 40. Syntax highlighting in diffs
 - [x] 41. Full-page Clone with account repositories
 - [x] 42. Ignored changes view with local snapshots, rail sync button
-- [x] 43. Guided tour
+- [x] 43. Guided tour (removed later)
 
 Not checked end to end: browser sign-in against a real provider, recording a shortcut by hand,
 rail menu actions. Light theme was checked on the main screens only.

@@ -387,7 +387,6 @@ impl App {
             close = true;
         }
         if new_branch {
-            self.tour_done(1);
             if let Some(repo) = self.repo() {
                 let name = self.branch_filter.trim().replace(' ', "-");
                 let r = git::create_branch(&repo, &name);
