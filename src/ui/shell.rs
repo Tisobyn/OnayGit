@@ -183,7 +183,7 @@ impl App {
         let mut dialog: Option<Dialog> = None;
         let mut settings = false;
         let mut home = false;
-        let mut accounts = false;
+        let accounts = false;
         let mut prs = false;
         let mut sync = false;
         let mut menu: Option<(u8, egui::Rect)> = None;

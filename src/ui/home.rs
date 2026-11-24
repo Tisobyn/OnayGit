@@ -98,6 +98,7 @@ impl App {
                     return;
                 }
                 self.load_repo_info(ctx);
+                self.want_owner_avatars(ctx);
                 ctx.request_repaint_after(Duration::from_secs(2));
                 ui.horizontal(|ui| {
                     let w = ui.available_width() - 90.0;
@@ -170,7 +171,8 @@ impl App {
                         if self.grid {
                             ui.horizontal_wrapped(|ui| {
                                 for &i in &shown {
-                                    let r = repo_card(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]));
+                                    let av = self.repo_avatar(&self.repos[i]);
+                                    let r = repo_card(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]), self.repo_styles.contains_key(&self.repos[i]), av.as_deref());
                                     if r.clicked() {
                                         open = Some(self.repos[i].clone());
                                     }
@@ -195,7 +197,8 @@ impl App {
                             });
                         } else {
                             for &i in &shown {
-                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]), self.repo_styles.contains_key(&self.repos[i]), self.repo_info.get(&self.repos[i])).on_hover_text(self.repos[i].display().to_string());
+                                let av = self.repo_avatar(&self.repos[i]);
+                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]), self.repo_styles.contains_key(&self.repos[i]), self.repo_info.get(&self.repos[i]), av.as_deref()).on_hover_text(self.repos[i].display().to_string());
                                 if r.clicked() {
                                     open = Some(self.repos[i].clone());
                                 }

@@ -36,7 +36,13 @@ impl App {
                     Some((a, b)) => (a.to_string(), b.to_string()),
                     None => ("-".to_string(), "-".to_string()),
                 };
-                out.push(format!("{}\t{branch}\t{dirty}\t{a}\t{b}", r.display()));
+                let owner = git::run(&r, &["remote", "get-url", "origin"])
+                    .ok()
+                    .and_then(|u| git::parse_remote_url(&u))
+                    .filter(|(h, _)| h == "github.com")
+                    .and_then(|(_, s)| s.split('/').next().map(String::from))
+                    .unwrap_or_default();
+                out.push(format!("{}\t{branch}\t{dirty}\t{a}\t{b}\t{owner}", r.display()));
             }
             Ok(out.join("\n"))
         });
@@ -85,6 +91,23 @@ impl App {
             let h = hint.as_ref().map(|(s, c)| (s.as_str(), c.as_str()));
             git::fetch_avatar(&key, h).map(|p| p.display().to_string())
         });
+    }
+
+    /// Picture of the GitHub owner of a listed repository, once fetched.
+    pub fn repo_avatar(&self, path: &Path) -> Option<PathBuf> {
+        let owner = &self.repo_info.get(path)?.owner;
+        if owner.is_empty() {
+            return None;
+        }
+        self.avatars.get(&format!("gh:{}", owner.to_lowercase()))?.clone()
+    }
+
+    /// Start fetching owner pictures for the listed repositories.
+    pub fn want_owner_avatars(&mut self, ctx: &egui::Context) {
+        let owners: Vec<String> = self.repo_info.values().filter(|i| !i.owner.is_empty()).map(|i| format!("gh:{}", i.owner)).collect();
+        for o in owners {
+            self.want_avatar(ctx, &o, None);
+        }
     }
 
     pub fn task_running(&self, label: &str) -> bool {
@@ -168,11 +191,11 @@ impl App {
             (T_INFO, Ok(lines)) => {
                 for l in lines.lines() {
                     let f: Vec<&str> = l.split('\t').collect();
-                    if f.len() == 5 {
+                    if f.len() == 6 {
                         let sync = (f[3] != "-").then(|| (f[3].parse().unwrap_or(0), f[4].parse().unwrap_or(0)));
                         self.repo_info.insert(
                             PathBuf::from(f[0]),
-                            RepoInfo { branch: f[1].to_string(), dirty: f[2].parse().unwrap_or(0), sync },
+                            RepoInfo { branch: f[1].to_string(), dirty: f[2].parse().unwrap_or(0), sync, owner: f[5].to_string() },
                         );
                     }
                 }

@@ -237,7 +237,7 @@ pub fn draw_diff(
                         let spans = crate::ui::syntax::highlight(lang, &l.text, &mut in_block);
                         let mut job = LayoutJob::default();
                         let mut at = 0;
-                        let mut push = |job: &mut LayoutJob, text: &str, color: Color32| {
+                        let push = |job: &mut LayoutJob, text: &str, color: Color32| {
                             if !text.is_empty() {
                                 job.append(text, 0.0, TextFormat { font_id: font.clone(), color, ..Default::default() });
                             }

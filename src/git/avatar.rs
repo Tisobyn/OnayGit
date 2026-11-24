@@ -29,6 +29,9 @@ fn younger(p: &Path, limit: Duration) -> bool {
 /// Picture URL when the email itself tells who the user is.
 pub fn url_from_email(email: &str) -> Option<String> {
     let e = email.to_lowercase();
+    if let Some(owner) = e.strip_prefix("gh:") {
+        return Some(format!("https://github.com/{owner}.png?size={SIZE}"));
+    }
     if let Some(user) = e.strip_suffix("@users.noreply.github.com") {
         return Some(match user.split_once('+') {
             Some((id, _)) if id.chars().all(|c| c.is_ascii_digit()) => format!("https://avatars.githubusercontent.com/u/{id}?s={SIZE}"),

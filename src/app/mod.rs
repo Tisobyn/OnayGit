@@ -86,6 +86,8 @@ pub struct RepoInfo {
     pub dirty: usize,
     /// (ahead, behind); None when there is no upstream.
     pub sync: Option<(u32, u32)>,
+    /// GitHub owner of the origin remote, if any.
+    pub owner: String,
 }
 
 pub type Done = (String, Result<String, String>);

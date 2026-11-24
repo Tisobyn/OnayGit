@@ -79,20 +79,27 @@ pub fn rail_item_tint(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool,
     resp
 }
 
-pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, custom: bool, info: Option<&RepoInfo>) -> egui::Response {
+pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, custom: bool, info: Option<&RepoInfo>, avatar: Option<&Path>) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 56.0), Sense::click());
     if resp.hovered() {
         ui.painter().rect_filled(rect, 8.0, p.hover);
     }
     let av = egui::Rect::from_center_size(rect.left_center() + egui::vec2(24.0, 0.0), egui::vec2(34.0, 34.0));
     ui.painter().rect_filled(av, 8.0, if resp.hovered() { p.border } else { p.hover });
-    ui.painter().text(
-        av.center(),
-        Align2::CENTER_CENTER,
-        repo_name(path).chars().next().unwrap_or('?').to_uppercase().to_string(),
-        FontId::proportional(14.0),
-        if custom { ACCENTS[style.color % ACCENTS.len()].1 } else { p.muted },
-    );
+    match avatar.filter(|_| !custom) {
+        Some(a) => {
+            egui::Image::new(format!("file://{}", a.display())).rounding(8.0).paint_at(ui, av);
+        }
+        None => {
+            ui.painter().text(
+                av.center(),
+                Align2::CENTER_CENTER,
+                repo_name(path).chars().next().unwrap_or('?').to_uppercase().to_string(),
+                FontId::proportional(14.0),
+                if custom { ACCENTS[style.color % ACCENTS.len()].1 } else { p.muted },
+            );
+        }
+    }
     ui.painter().text(rect.min + egui::vec2(56.0, 19.0), Align2::LEFT_CENTER, repo_name(path), FontId::proportional(14.0), p.text);
     ui.painter().with_clip_rect(egui::Rect::from_min_max(rect.min, egui::pos2(rect.max.x - 230.0, rect.max.y))).text(
         rect.min + egui::vec2(56.0, 38.0),
@@ -127,12 +134,18 @@ pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, cust
     resp
 }
 
-pub fn repo_card(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle) -> egui::Response {
+pub fn repo_card(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, custom: bool, avatar: Option<&Path>) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(200.0, 70.0), Sense::click());
     ui.painter().rect_filled(rect, 8.0, if resp.hovered() { p.hover } else { p.input });
     ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, p.border));
     let ic = egui::Rect::from_center_size(rect.min + egui::vec2(20.0, 24.0), egui::vec2(16.0, 16.0));
-    paint_icon(ui, &style.icon, ic, ACCENTS[style.color % ACCENTS.len()].1);
+    match avatar.filter(|_| !custom) {
+        Some(a) => {
+            let r = egui::Rect::from_center_size(ic.center(), egui::vec2(22.0, 22.0));
+            egui::Image::new(format!("file://{}", a.display())).rounding(5.0).paint_at(ui, r);
+        }
+        None => paint_icon(ui, &style.icon, ic, ACCENTS[style.color % ACCENTS.len()].1),
+    }
     ui.painter().text(
         rect.min + egui::vec2(36.0, 24.0),
         Align2::LEFT_CENTER,

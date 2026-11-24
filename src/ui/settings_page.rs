@@ -315,7 +315,7 @@ impl App {
                         let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), Sense::click());
                         ui.painter().circle_filled(rect.center(), 10.0, Color32::from_rgb(rgb[0], rgb[1], rgb[2]));
                         if self.space_color == Some(i) {
-                            ui.painter().circle_stroke(rect.center(), 12.5, egui::Stroke::new(1.5, p.text));
+                            ui.painter().circle_stroke(rect.center(), 12.5, egui::Stroke::new(1.5_f32, p.text));
                         }
                         if resp.on_hover_text(*name).clicked() {
                             self.space_color = Some(i);
