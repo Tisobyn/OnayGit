@@ -8,7 +8,6 @@ impl App {
         let mut remove: Option<usize> = None;
         let mut scan: Option<PathBuf> = None;
         let goto_settings = false;
-        let mut create = false;
         let mut open_disk = false;
         let mut del_space: Option<usize> = None;
         let mut new_space = false;
@@ -68,11 +67,16 @@ impl App {
                 });
                 ui.add_space(20.0);
                 rail_label(ui, "QUICK ACTIONS", &p);
-                if rail_item_h(ui, "add", "Create repository", false, &p, 28.0).clicked() {
-                    create = true;
+                let r = rail_item_h(ui, "add", "Create repository", false, &p, 28.0);
+                if r.clicked() {
+                    self.create_open = !self.create_open;
+                    self.create_anchor = r.rect.left_top() - egui::vec2(0.0, 8.0);
+                    self.create_dir = None;
+                    self.create_branch = "main".into();
                 }
                 if rail_item_h(ui, "branch", "Clone repository", false, &p, 28.0).clicked() {
                     self.clone_open = true;
+                    self.clone_dir = None;
                 }
                 if rail_item_h(ui, "folder", "Open from disk", false, &p, 28.0).clicked() {
                     open_disk = true;
@@ -207,33 +211,38 @@ impl App {
                 }
             });
 
-        // Clone window
+        // Clone dialog
         if self.clone_open {
-            let mut keep = true;
             let mut do_clone = false;
-            egui::Window::new("Clone repository")
-                .open(&mut keep)
-                .collapsible(false)
-                .resizable(false)
-                .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-                .show(ctx, |ui| {
-                    ui.label("Repository URL");
-                    ui.add(
-                        egui::TextEdit::singleline(&mut self.clone_url)
-                            .hint_text("https://github.com/user/repo.git")
-                            .desired_width(380.0),
-                    );
-                    ui.add_space(8.0);
-                    let ok = !self.clone_url.trim().is_empty() && self.busy.is_none();
-                    if ui.add_enabled(ok, egui::Button::new("Choose folder and clone")).clicked() {
+            let mut pick = false;
+            let mut cancel = false;
+            let close = modal(ctx, &p, "clone_repo", 540.0, Place::Center, "Clone repository", "", |ui| {
+                dialog_field(ui, &p, "Repository URL", &mut self.clone_url, "https://github.com/user/repo.git");
+                if folder_field(ui, &p, "Location", self.clone_dir.as_deref()).clicked() {
+                    pick = true;
+                }
+                ui.add_space(16.0);
+                let w = ui.available_width();
+                ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let ok = !self.clone_url.trim().is_empty() && self.clone_dir.is_some() && self.busy.is_none();
+                    if primary_button(ui, "Clone", ok).clicked() {
                         do_clone = true;
                     }
+                    if plain_button(ui, &p, "Cancel").clicked() {
+                        cancel = true;
+                    }
                 });
-            if !keep {
+            });
+            if pick {
+                if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
+                    self.clone_dir = Some(d);
+                }
+            }
+            if close || cancel {
                 self.clone_open = false;
             }
             if do_clone {
-                if let Some(parent) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
+                if let Some(parent) = self.clone_dir.clone() {
                     let url = self.clone_url.trim().to_string();
                     let name = url
                         .trim_end_matches('/')
@@ -245,6 +254,48 @@ impl App {
                     self.pending_clone = Some(parent.join(name));
                     self.spawn_in(ctx, parent, "Cloning", &["clone", &url]);
                     self.clone_open = false;
+                }
+            }
+        }
+
+        // Create repository popover
+        if self.create_open {
+            let mut pick = false;
+            let mut go = false;
+            let mut cancel = false;
+            let close = modal(ctx, &p, "create_repo", 340.0, Place::At(self.create_anchor, Align2::LEFT_BOTTOM), "Create repository", "", |ui| {
+                if folder_field(ui, &p, "Location", self.create_dir.as_deref()).clicked() {
+                    pick = true;
+                }
+                dialog_field(ui, &p, "Initial branch", &mut self.create_branch, "main");
+                ui.add_space(10.0);
+                let w = ui.available_width();
+                ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if primary_button(ui, "Create & open", self.create_dir.is_some()).clicked() {
+                        go = true;
+                    }
+                    if plain_button(ui, &p, "Cancel").clicked() {
+                        cancel = true;
+                    }
+                });
+            });
+            if pick {
+                if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
+                    self.create_dir = Some(d);
+                }
+            }
+            if close || cancel {
+                self.create_open = false;
+            }
+            if go {
+                if let Some(d) = self.create_dir.clone() {
+                    match git::init(&d, &self.create_branch) {
+                        Ok(_) => {
+                            self.create_open = false;
+                            open = Some(d);
+                        }
+                        Err(e) => self.status_msg = e,
+                    }
                 }
             }
         }
@@ -262,14 +313,6 @@ impl App {
 
         if goto_settings {
             self.open_settings();
-        }
-        if create {
-            if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
-                match git::init(&d) {
-                    Ok(_) => open = Some(d),
-                    Err(e) => self.status_msg = e,
-                }
-            }
         }
         if open_disk {
             if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {

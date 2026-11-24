@@ -142,38 +142,41 @@ impl App {
     }
 
     pub fn machine_window(&mut self, ctx: &egui::Context) {
-        let mut open = true;
+        let p = self.pal();
         let mut add = false;
-        egui::Window::new("Add machine")
-            .open(&mut open)
-            .collapsible(false)
-            .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                ui.label("Name (optional)");
-                ui.add(egui::TextEdit::singleline(&mut self.machine_name).desired_width(320.0));
-                ui.label("SSH host");
-                ui.add(egui::TextEdit::singleline(&mut self.machine_host).hint_text("me@server").desired_width(320.0));
-                ui.label(RichText::new("Needs key login (no password prompt).").size(11.5));
+        let busy = self.pending_machine.is_some();
+        let close = modal(ctx, &p, "add_machine", 540.0, Place::Center, "Add SSH machine", "One connection for all your repositories.", |ui| {
+            dialog_field(ui, &p, "Machine name", &mut self.machine_name, "Devbox");
+            dialog_field(ui, &p, "SSH host", &mut self.machine_host, "devbox or host.example.com");
+            ui.add_space(8.0);
+            egui::CollapsingHeader::new(RichText::new("Authentication and connection options").size(13.0).color(p.text)).show(ui, |ui| {
+                ui.label(RichText::new("Uses key login through your SSH config and agent. Password prompts are not supported.").size(12.5).color(p.muted));
+            });
+            ui.add_space(8.0);
+            ui.label(RichText::new("Your SSH config, keys and agent work automatically. OnayGit needs key login and never asks for a password.").size(12.5).color(p.muted));
+            if !self.status_msg.is_empty() {
                 ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    let busy = self.pending_machine.is_some();
-                    if ui.add_enabled(!busy && !self.machine_host.trim().is_empty(), egui::Button::new("Test and add")).clicked() {
-                        add = true;
-                    }
-                    if busy {
-                        ui.spinner();
-                    }
-                });
-                if !self.status_msg.is_empty() {
-                    ui.label(&self.status_msg);
+                ui.label(RichText::new(&self.status_msg).size(12.5).color(Color32::from_rgb(248, 81, 73)));
+            }
+            ui.add_space(16.0);
+            let w = ui.available_width();
+            ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if primary_button(ui, "Save and connect", !busy && !self.machine_host.trim().is_empty()).clicked() {
+                    add = true;
+                }
+                if plain_button(ui, &p, "Cancel").clicked() {
+                    self.dialog = None;
+                }
+                if busy {
+                    ui.spinner();
                 }
             });
+        });
         if add {
             self.status_msg.clear();
             self.add_machine(ctx);
         }
-        if !open {
+        if close {
             self.dialog = None;
         }
     }

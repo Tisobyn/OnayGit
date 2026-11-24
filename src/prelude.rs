@@ -14,6 +14,7 @@ pub use crate::settings::*;
 pub use crate::ui::diff_view::*;
 pub use crate::ui::graph::*;
 pub use crate::ui::icons::*;
+pub use crate::ui::modal::*;
 pub use crate::ui::theme::*;
 pub use crate::ui::tips::tip_box;
 pub use crate::ui::widgets::*;

@@ -8,6 +8,7 @@ pub mod home;
 pub mod icons;
 pub mod main_panel;
 pub mod manage;
+pub mod modal;
 pub mod settings_page;
 pub mod settings_repo;
 pub mod sidebar;

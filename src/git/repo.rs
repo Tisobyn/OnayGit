@@ -7,8 +7,9 @@ pub fn is_repo(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-pub fn init(dir: &Path) -> Result<String, String> {
-    run(dir, &["init", "-b", "main"]).or_else(|_| run(dir, &["init"]))
+pub fn init(dir: &Path, branch: &str) -> Result<String, String> {
+    let branch = if branch.trim().is_empty() { "main" } else { branch.trim() };
+    run(dir, &["init", "-b", branch]).or_else(|_| run(dir, &["init"]))
 }
 
 /// Find git repositories below `root` (and `root` itself), up to `depth` levels.

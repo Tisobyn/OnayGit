@@ -26,25 +26,21 @@ impl App {
             }
             Confirm::AbortOp => ("Abort", "Abort the operation in progress and go back to how things were?".to_string()),
         };
+        let p = self.pal();
         let (mut yes, mut no) = (false, false);
-        egui::Window::new(title)
-            .collapsible(false)
-            .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                ui.label(text);
-                ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        no = true;
-                    }
-                    let red = egui::Button::new(RichText::new("Confirm").color(Color32::WHITE))
-                        .fill(Color32::from_rgb(200, 50, 50));
-                    if ui.add(red).clicked() {
-                        yes = true;
-                    }
-                });
+        let close = modal(ctx, &p, "confirm", 440.0, Place::Center, title, &text, |ui| {
+            ui.add_space(8.0);
+            let w = ui.available_width();
+            ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if danger_button(ui, "Confirm").clicked() {
+                    yes = true;
+                }
+                if plain_button(ui, &p, "Cancel").clicked() {
+                    no = true;
+                }
             });
+        });
+        no |= close;
         if yes {
             if let Some(repo) = self.repo() {
                 let r = match &c {

@@ -95,6 +95,11 @@ pub struct App {
     pub grid: bool,
     pub clone_open: bool,
     pub clone_url: String,
+    pub clone_dir: Option<PathBuf>,
+    pub create_open: bool,
+    pub create_dir: Option<PathBuf>,
+    pub create_branch: String,
+    pub create_anchor: egui::Pos2,
     pub pending_clone: Option<PathBuf>,
 
     // settings
@@ -236,6 +241,11 @@ impl App {
             grid: false,
             clone_open: false,
             clone_url: String::new(),
+            clone_dir: None,
+            create_open: false,
+            create_dir: None,
+            create_branch: "main".into(),
+            create_anchor: egui::Pos2::ZERO,
             pending_clone: None,
             section: Section::Application,
             git_name: String::new(),
@@ -391,6 +401,16 @@ impl App {
                 if let Some(r) = app.repos.first().cloned() {
                     app.open_repo(r);
                 }
+            }
+            Ok("machine") => app.dialog = Some(Dialog::AddMachine),
+            Ok("clone") => {
+                app.screen = Screen::Home;
+                app.clone_open = true;
+            }
+            Ok("create") => {
+                app.screen = Screen::Home;
+                app.create_open = true;
+                app.create_anchor = egui::pos2(200.0, 380.0);
             }
             Ok("history") => {
                 if let Some(r) = app.repos.first().cloned() {
