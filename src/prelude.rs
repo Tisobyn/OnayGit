@@ -7,6 +7,7 @@ pub(crate) use crate::git;
 pub use crate::git::{Commit, DiffLine, FileChange, Kind};
 pub use crate::settings::*;
 pub use crate::ui::diff_view::*;
+pub use crate::ui::icons::*;
 pub use crate::ui::theme::*;
 pub use crate::ui::widgets::*;
 pub use eframe::egui::{

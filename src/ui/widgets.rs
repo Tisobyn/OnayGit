@@ -46,13 +46,8 @@ pub fn rail_item(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &
     if selected || resp.hovered() {
         ui.painter().rect_filled(rect, 6.0, p.hover);
     }
-    ui.painter().text(
-        rect.min + egui::vec2(18.0, 17.0),
-        Align2::CENTER_CENTER,
-        icon,
-        FontId::proportional(15.0),
-        p.muted,
-    );
+    let icon_rect = egui::Rect::from_center_size(rect.min + egui::vec2(20.0, 17.0), egui::vec2(18.0, 18.0));
+    paint_icon(ui, icon, icon_rect, p.muted);
     ui.painter().text(
         rect.min + egui::vec2(42.0, 17.0),
         Align2::LEFT_CENTER,

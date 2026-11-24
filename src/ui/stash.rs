@@ -11,11 +11,13 @@ impl App {
         if resp.hovered() {
             ui.painter().rect_filled(rect, 0.0, p.hover);
         }
-        let arrow = if self.stash_open { "v" } else { ">" };
+        let arrow = if self.stash_open { "caretDown" } else { "caretRight" };
+        let a = egui::Rect::from_center_size(rect.min + egui::vec2(16.0, 13.0), egui::vec2(12.0, 12.0));
+        paint_icon(ui, arrow, a, p.muted);
         ui.painter().text(
-            rect.min + egui::vec2(12.0, 13.0),
+            rect.min + egui::vec2(30.0, 13.0),
             Align2::LEFT_CENTER,
-            format!("{arrow}  Stashed changes ({})", self.stashes.len()),
+            format!("Stashed changes ({})", self.stashes.len()),
             FontId::proportional(13.0),
             p.text,
         );

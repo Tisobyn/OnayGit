@@ -17,27 +17,27 @@ impl App {
             .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(14.0, 22.0)))
             .show(ctx, |ui| {
                 rail_label(ui, "MACHINES", &p);
-                rail_item(ui, "🖥", "This Mac", true, &p);
+                rail_item(ui, "home", "This Mac", true, &p);
                 ui.add_space(6.0);
-                rail_item(ui, "+", "Add machine...", false, &p);
+                rail_item(ui, "add", "Add machine...", false, &p);
                 ui.add_space(22.0);
                 rail_label(ui, "QUICK ACTIONS", &p);
-                if rail_item(ui, "+", "Create repository", false, &p).clicked() {
+                if rail_item(ui, "add", "Create repository", false, &p).clicked() {
                     create = true;
                 }
-                if rail_item(ui, "⬇", "Clone repository", false, &p).clicked() {
+                if rail_item(ui, "pull", "Clone repository", false, &p).clicked() {
                     self.clone_open = true;
                 }
-                if rail_item(ui, "📁", "Open from disk", false, &p).clicked() {
+                if rail_item(ui, "folder", "Open from disk", false, &p).clicked() {
                     open_disk = true;
                 }
-                if rail_item(ui, "⟳", "Scan repositories", false, &p).clicked() {
+                if rail_item(ui, "sync", "Scan repositories", false, &p).clicked() {
                     if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
                         scan = Some(d);
                     }
                 }
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                    if rail_item(ui, "⚙", "Settings", false, &p).clicked() {
+                    if rail_item(ui, "settings", "Settings", false, &p).clicked() {
                         goto_settings = true;
                     }
                 });
@@ -58,7 +58,7 @@ impl App {
                     ui.selectable_value(&mut self.grid, false, "List");
                 });
                 ui.add_space(14.0);
-                if rail_item(ui, "+", "Add folder...", false, &p).clicked() {
+                if rail_item(ui, "add", "Add folder...", false, &p).clicked() {
                     if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
                         scan = Some(d);
                     }
@@ -88,13 +88,8 @@ impl App {
                 if resp.hovered() {
                     ui.painter().rect_filled(rect, 6.0, p.hover);
                 }
-                ui.painter().text(
-                    rect.min + egui::vec2(14.0, 26.0),
-                    Align2::LEFT_CENTER,
-                    "📁",
-                    FontId::proportional(24.0),
-                    ACCENT,
-                );
+                let folder = egui::Rect::from_center_size(rect.min + egui::vec2(28.0, 26.0), egui::vec2(28.0, 28.0));
+                paint_icon(ui, "folder", folder, ACCENT);
                 ui.painter().text(
                     rect.min + egui::vec2(58.0, 17.0),
                     Align2::LEFT_CENTER,

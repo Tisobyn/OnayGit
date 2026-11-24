@@ -7,4 +7,5 @@ description = "A simple GitHub Desktop style Git client in Rust"
 [dependencies]
 eframe = "0.29"
 rfd = "0.15"
+egui_extras = { version = "0.29", features = ["svg"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

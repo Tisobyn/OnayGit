@@ -30,6 +30,8 @@ impl App {
 
                     // Repository block
                     let name = self.repo().map(|r| repo_name(&r)).unwrap_or_default();
+                    ui.add_space(6.0);
+                    icon(ui, "folder", 18.0, p.muted);
                     ui.menu_button(two_line("Current Repository", &name, &p), |ui| {
                         ui.set_min_width(220.0);
                         for (i, r) in self.repos.iter().enumerate() {
@@ -56,6 +58,7 @@ impl App {
                     ui.separator();
 
                     // Branch block
+                    icon(ui, "branch", 18.0, p.muted);
                     ui.menu_button(two_line("Current Branch", &self.branch, &p), |ui| {
                         ui.set_min_width(240.0);
                         ui.add(
@@ -149,6 +152,13 @@ impl App {
                     } else {
                         two_line(title, &sub, &p)
                     };
+                    let sync_icon = match title {
+                        "Publish branch" => "publish",
+                        "Pull origin" => "pull",
+                        "Push origin" => "push",
+                        _ => "sync",
+                    };
+                    icon(ui, sync_icon, 18.0, p.muted);
                     if ui.add_enabled(enabled, egui::Button::new(label).frame(false)).clicked() {
                         sync = args;
                     }
@@ -157,7 +167,13 @@ impl App {
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new("⚙").frame(false)).on_hover_text("Settings").clicked() {
+                        ui.add_space(6.0);
+                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(28.0, 28.0), Sense::click());
+                        if resp.hovered() {
+                            ui.painter().rect_filled(rect, 6.0, p.hover);
+                        }
+                        paint_icon(ui, "settings", rect.shrink(5.0), p.muted);
+                        if resp.on_hover_text("Settings").clicked() {
                             goto_settings = true;
                         }
                     });

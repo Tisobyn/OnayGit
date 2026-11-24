@@ -16,18 +16,18 @@ impl App {
             .resizable(false)
             .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(14.0, 22.0)))
             .show(ctx, |ui| {
-                if rail_item(ui, "←", "Back", false, &p).clicked() {
+                if rail_item(ui, "arrowLeft", "Back", false, &p).clicked() {
                     back = true;
                 }
                 ui.add_space(18.0);
                 rail_label(ui, "APPLICATION", &p);
                 for (s, icon, name) in [
-                    (Section::Application, "⚙", "Application"),
-                    (Section::Appearance, "◐", "Appearance"),
-                    (Section::Git, "⎇", "Git"),
-                    (Section::Editor, "✎", "External editor"),
-                    (Section::Ignore, "⊘", "Ignored files"),
-                    (Section::Help, "?", "Help"),
+                    (Section::Application, "settings", "Application"),
+                    (Section::Appearance, "contrast", "Appearance"),
+                    (Section::Git, "branch", "Git"),
+                    (Section::Editor, "pencil", "External editor"),
+                    (Section::Ignore, "stop", "Ignored files"),
+                    (Section::Help, "help", "Help"),
                 ] {
                     if rail_item(ui, icon, name, self.section == s, &p).clicked() {
                         self.section = s;

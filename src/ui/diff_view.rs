@@ -117,7 +117,7 @@ pub fn draw_diff(
                                 );
                                 if sel.contains(&idx) {
                                     painter.rect_filled(b, 2.0, ACCENT);
-                                    painter.text(b.center(), Align2::CENTER_CENTER, "✓", FontId::proportional(side - 2.0), Color32::WHITE);
+                                    paint_icon(ui, "check", b.shrink(1.0), Color32::WHITE);
                                 } else {
                                     painter.rect_stroke(b, 2.0, egui::Stroke::new(1.0_f32, p.muted));
                                 }

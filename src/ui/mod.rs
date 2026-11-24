@@ -1,6 +1,7 @@
 pub mod dialogs;
 pub mod diff_view;
 pub mod home;
+pub mod icons;
 pub mod main_panel;
 pub mod manage;
 pub mod settings_page;
