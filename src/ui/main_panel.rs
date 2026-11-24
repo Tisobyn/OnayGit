@@ -11,6 +11,7 @@ impl App {
         let mut resolve: Option<ConflictAct> = None;
         let mut mode: Option<bool> = None;
         let mut events: Vec<DiffEvent> = Vec::new();
+        let mut restore_ignored = false;
 
         egui::CentralPanel::default().frame(egui::Frame::none().fill(p.bg)).show(ctx, |ui| {
             let changes = self.tab == Tab::Changes;
@@ -20,7 +21,10 @@ impl App {
                 .as_ref()
                 .and_then(|p| self.files.iter().find(|f| &f.path == p))
                 .is_some_and(|f| f.conflicted());
-            let lines: &[DiffLine] = if stash_view {
+            let ignored = self.tab == Tab::Ignored;
+            let lines: &[DiffLine] = if ignored {
+                &self.ignored_diff
+            } else if stash_view {
                 &self.stash_diff
             } else if changes {
                 &self.diff
@@ -35,7 +39,22 @@ impl App {
                 ui.separator();
             }
 
-            if !changes {
+            if ignored {
+                if let Some(f) = self.ignored_sel.clone() {
+                    egui::Frame::none().inner_margin(egui::Margin::symmetric(14.0, 6.0)).show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(f).size(13.5));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if self.ignored_has_snap && ui.button("Restore saved version").clicked() {
+                                    restore_ignored = true;
+                                }
+                            });
+                        });
+                    });
+                    ui.separator();
+                }
+            }
+            if !changes && !ignored {
                 if let Some(h) = self.selected_commit.as_deref() {
                     let subject = self.commits.iter().chain(self.compare_commits.iter()).find(|c| c.hash == h).map(|c| c.subject.clone()).unwrap_or_default();
                     let short: String = h.chars().take(7).collect();
@@ -160,6 +179,9 @@ impl App {
                         Tab::Changes if self.selected_file.is_none() => ("Select a file to inspect", "Choose a file to inspect its diff. Check the whole files you want to commit."),
                         Tab::Changes => ("No diff to show", ""),
                         Tab::History => ("Select a commit", ""),
+                        Tab::Ignored if self.ignored_files.is_empty() => ("No ignored files", "Files hidden by .gitignore show up here."),
+                        Tab::Ignored if self.ignored_sel.is_none() => ("Select a file", "Review local changes to files git ignores."),
+                        Tab::Ignored => ("No changes since the last snapshot", ""),
                     };
                     ui.label(RichText::new(msg).size(15.0).color(p.text));
                     if !hint.is_empty() {
@@ -171,11 +193,14 @@ impl App {
                 let label = if self.diff_staged { "Unstage hunk" } else { "Stage hunk" };
                 events = draw_diff(ui, lines, &p, self.settings.diff_font, Some(&self.sel_lines), label, self.selected_file.as_deref().unwrap_or(""));
             } else {
-                let file = if self.tab == Tab::History { self.selected_commit_file.as_deref() } else { self.selected_file.as_deref() };
+                let file = if self.tab == Tab::Ignored { self.ignored_sel.as_deref() } else if self.tab == Tab::History { self.selected_commit_file.as_deref() } else { self.selected_file.as_deref() };
                 draw_diff(ui, lines, &p, self.settings.diff_font, None, "", file.unwrap_or(""));
             }
         });
 
+        if restore_ignored {
+            self.ignored_restore();
+        }
         if let Some(a) = resolve {
             if let Some(path) = self.selected_file.clone() {
                 self.resolve_conflict(&path, a);

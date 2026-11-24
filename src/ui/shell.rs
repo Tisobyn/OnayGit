@@ -185,6 +185,7 @@ impl App {
         let mut home = false;
         let mut accounts = false;
         let mut prs = false;
+        let mut sync = false;
         let mut menu: Option<(u8, egui::Rect)> = None;
         egui::SidePanel::left("rail")
             .exact_width(RAIL_W)
@@ -200,6 +201,9 @@ impl App {
                     if icon_button(ui, "history", "History", self.tab == Tab::History, p).clicked() {
                         new_tab = Some(Tab::History);
                     }
+                    if icon_button(ui, "stop", "Ignored changes", self.tab == Tab::Ignored, p).clicked() {
+                        new_tab = Some(Tab::Ignored);
+                    }
                     ui.add_space(2.0);
                     ui.separator();
                     ui.add_space(2.0);
@@ -211,6 +215,14 @@ impl App {
                     }
                     if icon_button(ui, "archive", "Tags", false, p).clicked() {
                         dialog = Some(Dialog::Tags);
+                    }
+                    let tip = match self.ahead_behind {
+                        Some((0, 0)) => "Up to date. Click to fetch".to_string(),
+                        Some((a, b)) => format!("{a} to push, {b} to pull. Click to fetch"),
+                        None => "Fetch".to_string(),
+                    };
+                    if icon_button(ui, "sync", &tip, self.busy.as_deref() == Some("Fetching"), p).clicked() {
+                        sync = true;
                     }
                 }
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
@@ -248,12 +260,20 @@ impl App {
         self.rail_menu_ui(ctx, p);
         if let Some(t) = new_tab {
             self.tab = t;
+            if t == Tab::Ignored {
+                self.load_ignored();
+            }
         }
         if dialog.is_some() {
             self.dialog = dialog;
         }
         if prs {
             self.open_pull_requests(ctx);
+        }
+        if sync && self.has_remote && self.busy.is_none() {
+            if let Some(repo) = self.repo() {
+                self.spawn_in(ctx, repo, "Fetching", &["fetch", "--all", "--prune"]);
+            }
         }
         if home {
             self.screen = Screen::Home;

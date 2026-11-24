@@ -4,6 +4,7 @@ use crate::prelude::*;
 pub mod accounts;
 pub mod ai;
 pub mod history;
+pub mod ignored;
 pub mod hosting;
 pub mod machines;
 pub mod refs;
@@ -26,6 +27,7 @@ pub enum Screen {
 pub enum Tab {
     Changes,
     History,
+    Ignored,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -115,6 +117,11 @@ pub struct App {
 
     // repo
     pub tab: Tab,
+    pub ignored_files: Vec<String>,
+    pub ignored_sel: Option<String>,
+    pub ignored_diff: Vec<DiffLine>,
+    pub ignored_changed: String,
+    pub ignored_has_snap: bool,
     pub filter: String,
     pub files: Vec<FileChange>,
     pub selected_file: Option<String>,
@@ -288,6 +295,11 @@ impl App {
             git_name: String::new(),
             git_email: String::new(),
             tab: Tab::Changes,
+            ignored_files: vec![],
+            ignored_sel: None,
+            ignored_diff: vec![],
+            ignored_changed: String::new(),
+            ignored_has_snap: false,
             filter: String::new(),
             files: vec![],
             selected_file: None,
@@ -491,6 +503,12 @@ impl App {
                     "switcher" => app.dialog = Some(Dialog::Switcher),
                     _ => {}
                 }
+            }
+            Ok("ignored") => {
+                app.tab = Tab::Ignored;
+                app.load_ignored();
+                app.ignored_sel = app.ignored_files.first().cloned();
+                app.ignored_diff_load();
             }
             Ok("machine") => app.dialog = Some(Dialog::AddMachine),
             Ok("clone") => {

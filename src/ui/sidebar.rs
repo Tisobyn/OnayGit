@@ -39,6 +39,7 @@ impl App {
                     let title = match self.tab {
                         Tab::Changes => "Changes",
                         Tab::History => "History",
+                        Tab::Ignored => "Ignored changes",
                     };
                     ui.label(RichText::new(title).size(14.0).color(p.text));
                     if self.tab == Tab::History {
@@ -315,6 +316,7 @@ impl App {
                         });
                     }
                     Tab::History => self.history_tab(ui, &p),
+                    Tab::Ignored => self.ignored_tab(ui, &p),
                 }
             });
 
@@ -364,6 +366,53 @@ impl App {
         }
         if ask.is_some() {
             self.confirm = ask;
+        }
+    }
+}
+
+impl App {
+    /// Ignored files with a snapshot to compare against.
+    pub fn ignored_tab(&mut self, ui: &mut egui::Ui, p: &Pal) {
+        let mut snap = false;
+        let mut pick: Option<String> = None;
+        egui::TopBottomPanel::bottom("ignored_box").frame(egui::Frame::none().fill(p.sidebar)).show_inside(ui, |ui| {
+            ui.separator();
+            egui::Frame::none().inner_margin(egui::Margin::symmetric(14.0, 10.0)).show(ui, |ui| {
+                ui.label(RichText::new("Local history, never committed.").size(12.0).color(p.muted));
+                ui.add_space(6.0);
+                if ui.button("Save snapshot").clicked() {
+                    snap = true;
+                }
+            });
+        });
+        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+            if self.ignored_files.is_empty() {
+                ui.add_space(30.0);
+                ui.vertical_centered(|ui| ui.label(RichText::new("No ignored files").color(p.muted)));
+            }
+            for f in &self.ignored_files {
+                let sel = self.ignored_sel.as_deref() == Some(f.as_str());
+                let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 26.0), Sense::click());
+                if sel || resp.hovered() {
+                    ui.painter().rect_filled(rect, 6.0, p.hover);
+                }
+                let st = self.ignored_status(f);
+                let clip = ui.painter().with_clip_rect(egui::Rect::from_min_max(rect.min, rect.max - egui::vec2(30.0, 0.0)));
+                clip.text(rect.left_center() + egui::vec2(12.0, 0.0), Align2::LEFT_CENTER, f, FontId::proportional(13.0), if st == ' ' { p.muted } else { p.text });
+                if st != ' ' {
+                    ui.painter().text(rect.right_center() - egui::vec2(12.0, 0.0), Align2::RIGHT_CENTER, st, FontId::proportional(12.0), p.muted);
+                }
+                if resp.clicked() {
+                    pick = Some(f.clone());
+                }
+            }
+        });
+        if let Some(f) = pick {
+            self.ignored_sel = Some(f);
+            self.ignored_diff_load();
+        }
+        if snap {
+            self.ignored_snapshot();
         }
     }
 }
