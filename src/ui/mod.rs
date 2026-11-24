@@ -1,0 +1,11 @@
+pub mod dialogs;
+pub mod diff_view;
+pub mod home;
+pub mod main_panel;
+pub mod manage;
+pub mod settings_page;
+pub mod sidebar;
+pub mod stash;
+pub mod theme;
+pub mod toolbar;
+pub mod widgets;
