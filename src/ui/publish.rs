@@ -71,7 +71,7 @@ impl App {
     pub fn pull_requests_window(&mut self, ctx: &egui::Context) {
         let p = self.pal();
         let mut create = false;
-        let mut reload = false;
+        let mut reload = std::mem::take(&mut self.pr_reload);
         let mut url: Option<String> = None;
         let close = modal(ctx, &p, "pull_requests", 580.0, Place::Center, "Pull requests", "", |ui| {
             ui.horizontal(|ui| {

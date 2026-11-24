@@ -177,6 +177,8 @@ impl App {
                 self.pr_title.clear();
                 self.pr_body.clear();
                 self.status_msg.clear();
+                self.pr_reload = true;
+                self.refresh();
             }
             (T_PUBLISH, Ok(_)) => {
                 self.dialog = None;

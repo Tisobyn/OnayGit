@@ -252,6 +252,8 @@ pub struct App {
     pub prs: Vec<git::PullRequest>,
     pub pr_error: String,
     pub pr_title: String,
+    /// Reload the pull request list on the next frame (after one was created).
+    pub pr_reload: bool,
     pub pr_body: String,
     pub pr_base: String,
     pub ai_key_set: bool,
@@ -449,6 +451,7 @@ impl App {
             prs: vec![],
             pr_error: String::new(),
             pr_title: String::new(),
+            pr_reload: false,
             pr_body: String::new(),
             pr_base: String::new(),
             ai_key_set: false,
