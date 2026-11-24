@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
+use crate::app::spaces::{space_icon_name, SPACE_COLORS, SPACE_ICONS};
 
 impl App {
     pub fn open_settings(&mut self) {
@@ -195,7 +196,7 @@ impl App {
             for (i, s) in self.spaces.iter().enumerate() {
                 group_row(ui, p, |ui| {
                     ui.horizontal(|ui| {
-                        icon(ui, "layers", 18.0, p.muted);
+                        icon(ui, &space_icon_name(&s.icon), 18.0, if s.color.is_some() { space_color32(s.color) } else { p.muted });
                         ui.vertical(|ui| {
                             ui.label(RichText::new(&s.name).color(p.text));
                             let n = s.repos.len();
@@ -217,10 +218,14 @@ impl App {
         });
         if new {
             self.space_name.clear();
+            self.space_icon = "layers".into();
+            self.space_color = None;
             self.space_dialog = Some(None);
         }
         if let Some(i) = edit {
             self.space_name = self.spaces[i].name.clone();
+            self.space_icon = self.spaces[i].icon.clone();
+            self.space_color = self.spaces[i].color;
             self.space_dialog = Some(Some(i));
         }
         if let Some(i) = switch {
@@ -228,45 +233,91 @@ impl App {
         }
     }
 
-    fn space_dialog_ui(&mut self, ctx: &egui::Context) {
+    /// Right-hand panel to create or edit a space, as in 1git.
+    pub fn space_dialog_ui(&mut self, ctx: &egui::Context) {
         let Some(target) = self.space_dialog else { return };
+        if self.section != Section::Spaces || self.screen != Screen::Settings {
+            return;
+        }
+        let p = self.pal();
         let mut save = false;
         let mut delete = false;
         let mut close = false;
-        egui::Window::new(if target.is_some() { "Edit space" } else { "New space" })
-            .collapsible(false)
+        egui::SidePanel::right("space_panel")
+            .exact_width(514.0)
             .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+            .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
             .show(ctx, |ui| {
-                ui.set_width(280.0);
-                ui.label("Name");
-                let r = ui.add(egui::TextEdit::singleline(&mut self.space_name).desired_width(f32::INFINITY));
+                ui.label(RichText::new(if target.is_some() { "Edit space" } else { "New space" }).size(14.0).color(p.text));
+                ui.add_space(16.0);
+                ui.label(RichText::new("Name").size(13.0).color(p.text));
+                ui.add_space(4.0);
+                let r = ui.add(
+                    egui::TextEdit::singleline(&mut self.space_name)
+                        .hint_text("Work, Personal...")
+                        .desired_width(f32::INFINITY)
+                        .margin(egui::vec2(10.0, 8.0)),
+                );
                 if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                     save = true;
                 }
+                ui.add_space(16.0);
+                ui.label(RichText::new("Icon").size(13.0).color(p.text));
                 ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    if ui.button("Save").clicked() {
-                        save = true;
-                    }
-                    if ui.button("Cancel").clicked() {
-                        close = true;
-                    }
-                    if target.is_some() {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button(RichText::new("Delete").color(Color32::from_rgb(220, 90, 90))).clicked() {
-                                delete = true;
-                            }
-                        });
+                let tint = self.space_color.map(|c| space_color32(Some(c))).unwrap_or(p.text);
+                ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+                ui.horizontal_wrapped(|ui| {
+                    for (id, label) in SPACE_ICONS {
+                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(40.0, 40.0), Sense::click());
+                        let on = self.space_icon == id;
+                        if on || resp.hovered() {
+                            ui.painter().rect_filled(rect, 6.0, p.hover);
+                        }
+                        paint_icon(ui, &space_icon_name(id), egui::Rect::from_center_size(rect.center(), egui::vec2(20.0, 20.0)), if on { tint } else { p.muted });
+                        if resp.on_hover_text(label).clicked() {
+                            self.space_icon = id.to_string();
+                        }
                     }
                 });
+                ui.add_space(16.0);
+                ui.label(RichText::new("Colour").size(13.0).color(p.text));
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 14.0;
+                    let def = ui.add(egui::Button::new(RichText::new("Default").color(p.text)).fill(if self.space_color.is_none() { p.hover } else { Color32::TRANSPARENT }).min_size(egui::vec2(0.0, 28.0)));
+                    if def.clicked() {
+                        self.space_color = None;
+                    }
+                    for (i, (name, rgb)) in SPACE_COLORS.iter().enumerate() {
+                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), Sense::click());
+                        ui.painter().circle_filled(rect.center(), 10.0, Color32::from_rgb(rgb[0], rgb[1], rgb[2]));
+                        if self.space_color == Some(i) {
+                            ui.painter().circle_stroke(rect.center(), 12.5, egui::Stroke::new(1.5, p.text));
+                        }
+                        if resp.on_hover_text(*name).clicked() {
+                            self.space_color = Some(i);
+                        }
+                    }
+                });
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                    let w = ui.available_width();
+                    ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let ok = !self.space_name.trim().is_empty();
+                        if primary_button(ui, if target.is_some() { "Save" } else { "Create space" }, ok).clicked() {
+                            save = true;
+                        }
+                        if plain_button(ui, &p, "Cancel").clicked() {
+                            close = true;
+                        }
+                        if target.is_some() && danger_button(ui, "Delete").clicked() {
+                            delete = true;
+                        }
+                    });
+                });
             });
-        if save {
+        if save && !self.space_name.trim().is_empty() {
             match target {
-                Some(i) => {
-                    let n = self.space_name.clone();
-                    self.rename_space(i, &n);
-                }
+                Some(i) => self.edit_space(i),
                 None => self.add_space(),
             }
             close = true;
@@ -385,32 +436,98 @@ impl App {
     }
 
     fn keybinds_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Keybinds", "Keyboard shortcuts. Changing them is not available yet.", |_| {});
-        ui.add(egui::TextEdit::singleline(&mut self.keybind_search).hint_text("Find an action or shortcut...").desired_width(f32::INFINITY));
+        use crate::keybinds as kb;
+        let mut restore = false;
+        page_header(ui, p, "Keybinds", "Click a shortcut to change it. Changes apply immediately and are saved.", |ui| {
+            if ui.add_enabled(!self.keybinds.is_empty(), egui::Button::new("Restore defaults")).clicked() {
+                restore = true;
+            }
+        });
+        ui.add_space(4.0);
+        ui.add(egui::TextEdit::singleline(&mut self.keybind_search).hint_text("Find an action or shortcut...").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
         ui.add_space(14.0);
+        // Record a new shortcut for the chosen command.
+        if let Some(id) = self.recording {
+            let (esc, got) = ui.input(|i| (i.key_pressed(egui::Key::Escape), kb::captured(i)));
+            if esc {
+                self.recording = None;
+                self.keybind_msg.clear();
+            } else if let Some(b) = got {
+                let has_mod = b.contains('-') && b != "-";
+                let taken = kb::COMMANDS.iter().find(|c| c.id != id && kb::bindings(c, &self.keybinds).contains(&b));
+                if kb::reserved(&b) {
+                    self.keybind_msg = format!("{} is reserved by the system.", kb::format(&b));
+                } else if !has_mod && id != "expand-diff" {
+                    self.keybind_msg = "Add a modifier key such as \u{2318}, \u{2303} or \u{2325}.".into();
+                } else if let Some(c) = taken {
+                    self.keybind_msg = format!("{} is already used by {}.", kb::format(&b), c.label);
+                } else {
+                    let default = kb::COMMANDS.iter().find(|c| c.id == id).map(|c| c.key == b && c.alias.is_none()).unwrap_or(false);
+                    if default {
+                        self.keybinds.remove(id);
+                    } else {
+                        self.keybinds.insert(id.to_string(), b);
+                    }
+                    kb::save(&self.keybinds);
+                    self.recording = None;
+                    self.keybind_msg.clear();
+                }
+            }
+        }
         let q = self.keybind_search.to_lowercase();
-        let groups: [(&str, &[(&str, &str)]); 2] = [
-            ("Application", &[("Open Settings", "\u{2318},"), ("Find repository or action", "\u{2318}P")]),
-            ("Tabs", &[("New tab", "\u{2318}T"), ("Close tab", "\u{2318}W"), ("Changes", "\u{2318}1"), ("History", "\u{2318}2")]),
-        ];
-        for (title, rows) in groups {
-            let rows: Vec<&(&str, &str)> = rows.iter().filter(|(n, k)| q.is_empty() || n.to_lowercase().contains(&q) || k.to_lowercase().contains(&q)).collect();
+        let mut start: Option<&'static str> = None;
+        for group in kb::GROUPS {
+            let rows: Vec<&kb::Cmd> = kb::COMMANDS
+                .iter()
+                .filter(|c| c.group == group)
+                .filter(|c| q.is_empty() || format!("{} {} {} {}", c.label, c.group, c.desc, kb::label(c, &self.keybinds)).to_lowercase().contains(&q))
+                .collect();
             if rows.is_empty() {
                 continue;
             }
             let count = format!("{} shortcut{}", rows.len(), if rows.len() == 1 { "" } else { "s" });
-            settings_group(ui, p, title, &count, |_| {}, |ui| {
-                for (name, key) in rows {
+            settings_group(ui, p, group, &count, |_| {}, |ui| {
+                for c in rows {
                     group_row(ui, p, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label(RichText::new(*name).size(13.5).color(p.text));
+                            ui.vertical(|ui| {
+                                ui.label(RichText::new(c.label).size(13.5).color(p.text));
+                                if !c.desc.is_empty() {
+                                    ui.label(RichText::new(c.desc).size(12.0).color(p.muted));
+                                }
+                            });
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                key_chip(ui, p, key);
+                                if c.fixed {
+                                    ui.label(RichText::new(kb::label(c, &self.keybinds)).size(12.5).color(p.muted));
+                                } else if self.recording == Some(c.id) {
+                                    egui::Frame::none().fill(p.hover).stroke(egui::Stroke::new(1.0_f32, accent())).rounding(5.0).inner_margin(egui::Margin::symmetric(10.0, 4.0)).show(ui, |ui| {
+                                        ui.label(RichText::new("Press shortcut...").size(12.5).color(p.text));
+                                    });
+                                } else {
+                                    let label = kb::label(c, &self.keybinds);
+                                    let r = ui.scope(|ui| key_chip(ui, p, &label)).response.interact(Sense::click());
+                                    if r.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                                        start = Some(c.id);
+                                    }
+                                }
                             });
                         });
                     });
                 }
             });
+            ui.add_space(14.0);
+        }
+        if !self.keybind_msg.is_empty() {
+            ui.label(RichText::new(&self.keybind_msg).size(12.5).color(Color32::from_rgb(235, 110, 100)));
+        }
+        if let Some(id) = start {
+            self.recording = Some(id);
+            self.keybind_msg.clear();
+        }
+        if restore {
+            self.keybinds.clear();
+            kb::save(&self.keybinds);
+            self.recording = None;
         }
     }
 
@@ -862,4 +979,12 @@ fn appearance_preview(ui: &mut egui::Ui, p: &Pal) {
     });
     ui.add_space(8.0);
     ui.label(RichText::new("Updates as you adjust your appearance settings.").size(12.0).color(p.muted));
+}
+
+/// Colour of a space, or the muted default when none is chosen.
+pub fn space_color32(c: Option<usize>) -> Color32 {
+    match c.and_then(|i| SPACE_COLORS.get(i)) {
+        Some((_, rgb)) => Color32::from_rgb(rgb[0], rgb[1], rgb[2]),
+        None => Color32::from_rgb(160, 165, 175),
+    }
 }

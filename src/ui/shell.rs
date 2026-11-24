@@ -187,10 +187,10 @@ impl App {
             .show(ctx, |ui| {
                 ui.spacing_mut().item_spacing.y = 6.0;
                 if self.screen == Screen::Repo {
-                    if icon_button(ui, "branch", "Changes (Cmd+1)", self.tab == Tab::Changes, p).clicked() {
+                    if icon_button(ui, "branch", "Changes", self.tab == Tab::Changes, p).clicked() {
                         new_tab = Some(Tab::Changes);
                     }
-                    if icon_button(ui, "history", "History (Cmd+2)", self.tab == Tab::History, p).clicked() {
+                    if icon_button(ui, "history", "History", self.tab == Tab::History, p).clicked() {
                         new_tab = Some(Tab::History);
                     }
                     ui.add_space(2.0);

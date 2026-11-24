@@ -171,6 +171,9 @@ pub struct App {
     pub acct_cli: bool,
     pub launcher_msg: String,
     pub keybind_search: String,
+    pub keybinds: HashMap<String, String>,
+    pub recording: Option<&'static str>,
+    pub keybind_msg: String,
     pub repo_name_cfg: String,
     pub repo_email_cfg: String,
     pub repo_info: HashMap<PathBuf, RepoInfo>,
@@ -179,6 +182,8 @@ pub struct App {
     pub spaces: Vec<spaces::Space>,
     pub selected_space: Option<usize>,
     pub space_name: String,
+    pub space_icon: String,
+    pub space_color: Option<usize>,
     /// Space dialog: Some(None) creates, Some(Some(i)) edits space i.
     pub space_dialog: Option<Option<usize>>,
     pub git_editing: bool,
@@ -229,6 +234,15 @@ impl App {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         set_accent(settings.accent);
         apply_visuals(&cc.egui_ctx, settings.theme);
+        // Key symbols and arrows are missing from the default font; borrow them from macOS.
+        if let Ok(bytes) = std::fs::read("/System/Library/Fonts/Apple Symbols.ttf") {
+            let mut fonts = egui::FontDefinitions::default();
+            fonts.font_data.insert("symbols".into(), egui::FontData::from_owned(bytes));
+            for fam in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+                fonts.families.entry(fam).or_default().push("symbols".into());
+            }
+            cc.egui_ctx.set_fonts(fonts);
+        }
         cc.egui_ctx.set_zoom_factor(settings.zoom);
 
         let (tx, rx) = channel();
@@ -313,6 +327,9 @@ impl App {
             acct_cli: false,
             launcher_msg: String::new(),
             keybind_search: String::new(),
+            keybinds: crate::keybinds::load(),
+            recording: None,
+            keybind_msg: String::new(),
             repo_name_cfg: String::new(),
             repo_email_cfg: String::new(),
             repo_info: HashMap::new(),
@@ -321,6 +338,8 @@ impl App {
             spaces: spaces::load_spaces(),
             selected_space: None,
             space_name: String::new(),
+            space_icon: "layers".into(),
+            space_color: None,
             space_dialog: None,
             git_editing: false,
             ai_adding: false,
@@ -384,6 +403,10 @@ impl App {
                 app.open_settings();
                 app.section = match s.strip_prefix("settings:").unwrap_or("") {
                     "spaces" => Section::Spaces,
+                    "spacenew" => {
+                        app.space_dialog = Some(None);
+                        Section::Spaces
+                    }
                     "appearance" => Section::Appearance,
                     "keybinds" => Section::Keybinds,
                     "privacy" => Section::Privacy,

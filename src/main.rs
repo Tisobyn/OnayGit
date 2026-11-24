@@ -1,4 +1,5 @@
 mod app;
+mod keybinds;
 mod prelude;
 mod settings;
 mod ui;
