@@ -65,6 +65,13 @@ impl App {
                 .show(ctx, |ui| self.account_add_panel(ctx, ui, &p));
         }
         self.space_dialog_ui(ctx);
+        if self.section == Section::Git && self.git_editing {
+            egui::SidePanel::right("identity_panel")
+                .exact_width(514.0)
+                .resizable(false)
+                .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
+                .show(ctx, |ui| self.identity_panel(ui, &p));
+        }
         if self.section == Section::Appearance {
             egui::SidePanel::right("appearance_preview")
                 .exact_width(330.0)
@@ -604,56 +611,101 @@ impl App {
                 toggle_row(ui, p, "Automatically include changed files", "Include all changed files in your next commit automatically.", &mut self.settings.auto_include);
             });
         });
-        let mut save = false;
-        let mut cancel = false;
         let mut edit = false;
         settings_group(ui, p, "Identity", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
-                if self.git_editing {
-                    field_label(ui, p, "Name");
-                    ui.add(egui::TextEdit::singleline(&mut self.git_name).desired_width(f32::INFINITY));
-                    field_label(ui, p, "Email");
-                    ui.add(egui::TextEdit::singleline(&mut self.git_email).desired_width(f32::INFINITY));
-                    ui.add_space(6.0);
-                    ui.horizontal(|ui| {
-                        if ui.button("Save").clicked() {
-                            save = true;
-                        }
-                        if ui.button("Cancel").clicked() {
-                            cancel = true;
+                ui.horizontal(|ui| {
+                    let (r, _) = ui.allocate_exact_size(egui::vec2(36.0, 36.0), Sense::hover());
+                    ui.painter().circle_filled(r.center(), 18.0, p.hover);
+                    let letter = self.git_name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_else(|| "?".into());
+                    ui.painter().text(r.center(), Align2::CENTER_CENTER, letter, FontId::proportional(13.0), p.text);
+                    ui.vertical(|ui| {
+                        let name = if self.git_name.is_empty() { "Name not configured" } else { self.git_name.as_str() };
+                        let email = if self.git_email.is_empty() { "Email not configured" } else { self.git_email.as_str() };
+                        ui.label(RichText::new(name).size(13.5).color(p.text));
+                        ui.label(RichText::new(email).size(12.0).color(p.muted));
+                    });
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.add_enabled(!self.git_editing, egui::Button::new("Edit").min_size(egui::vec2(0.0, 28.0))).clicked() {
+                            edit = true;
                         }
                     });
-                } else {
-                    ui.horizontal(|ui| {
-                        let (r, _) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), Sense::hover());
-                        ui.painter().circle_filled(r.center(), 16.0, p.hover);
-                        let letter = self.git_name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_else(|| "?".into());
-                        ui.painter().text(r.center(), Align2::CENTER_CENTER, letter, FontId::proportional(13.0), p.text);
-                        ui.vertical(|ui| {
-                            let name = if self.git_name.is_empty() { "Not set" } else { self.git_name.as_str() };
-                            ui.label(RichText::new(name).size(13.5).color(p.text));
-                            ui.label(RichText::new(&self.git_email).size(12.0).color(p.muted));
-                        });
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button("Edit").clicked() {
-                                edit = true;
-                            }
-                        });
-                    });
-                }
+                });
             });
         });
         if edit {
             self.git_editing = true;
+            self.git_src = None;
         }
+    }
+
+    /// Right-hand panel to change the commit identity: an account or custom values.
+    pub fn identity_panel(&mut self, ui: &mut egui::Ui, p: &Pal) {
+        ui.label(RichText::new("Edit commit identity").size(14.0).color(p.text));
+        ui.add_space(12.0);
+        let n = self.accounts.len() + 1;
+        let w = (ui.available_width() - 10.0 * (n.min(2) as f32 - 1.0)) / n.min(2) as f32;
+        let mut pick: Option<Option<usize>> = None;
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(10.0, 10.0);
+            for (i, a) in self.accounts.iter().enumerate() {
+                if identity_tile(ui, p, if a.provider == git::Provider::GitHub { "github" } else { "gitlab" }, &a.user, &a.host, self.git_src == Some(i), w).clicked() {
+                    pick = Some(Some(i));
+                }
+            }
+            if identity_tile(ui, p, "pencil", "Custom", "Enter name and email", self.git_src.is_none(), w).clicked() {
+                pick = Some(None);
+            }
+        });
+        if let Some(src) = pick {
+            self.git_src = src;
+            if let Some(a) = src.and_then(|i| self.accounts.get(i)) {
+                self.git_name = a.user.clone();
+                self.git_email = format!("{}@users.noreply.{}", a.user, a.host);
+            }
+        }
+        ui.add_space(8.0);
+        if self.git_src.is_none() {
+            ui.label(RichText::new("Name").size(13.0).color(p.text));
+            ui.add(egui::TextEdit::singleline(&mut self.git_name).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+            ui.add_space(8.0);
+            ui.label(RichText::new("Commit email").size(13.0).color(p.text));
+            ui.add(egui::TextEdit::singleline(&mut self.git_email).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+        } else {
+            ui.label(RichText::new(format!("{} <{}>", self.git_name, self.git_email)).size(12.5).color(p.muted));
+        }
+        if !self.status_msg.is_empty() {
+            ui.add_space(6.0);
+            ui.label(RichText::new(&self.status_msg).size(12.5).color(Color32::from_rgb(235, 110, 100)));
+        }
+        let mut save = false;
+        let mut cancel = false;
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+            let w = ui.available_width();
+            ui.allocate_ui_with_layout(egui::vec2(w, 36.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let ok = !self.git_name.trim().is_empty() && !self.git_email.trim().is_empty();
+                if primary_button(ui, "Save identity", ok).clicked() {
+                    save = true;
+                }
+                if plain_button(ui, p, "Cancel").clicked() {
+                    cancel = true;
+                }
+            });
+        });
         if cancel {
             self.git_editing = false;
+            self.status_msg.clear();
+            self.git_name = git::config_get("user.name");
+            self.git_email = git::config_get("user.email");
         }
         if save {
             let a = git::config_set("user.name", self.git_name.trim());
             let b = git::config_set("user.email", self.git_email.trim());
             match a.and(b) {
-                Ok(_) => self.git_editing = false,
+                Ok(_) => {
+                    self.git_editing = false;
+                    self.status_msg.clear();
+                }
                 Err(e) => self.status_msg = e,
             }
         }
@@ -1225,4 +1277,15 @@ fn copy_field(ui: &mut egui::Ui, p: &Pal, label: &str, value: &str) {
             });
         });
     });
+}
+
+/// Tile with icon, title and a detail line, as used for identity choices.
+fn identity_tile(ui: &mut egui::Ui, p: &Pal, icon_name: &str, title: &str, detail: &str, selected: bool, w: f32) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(w, 100.0), Sense::click());
+    ui.painter().rect_filled(rect, 8.0, if selected { p.hover } else { Color32::TRANSPARENT });
+    ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, if selected { accent() } else { p.border }));
+    paint_icon(ui, icon_name, egui::Rect::from_center_size(rect.center() - egui::vec2(0.0, 26.0), egui::vec2(20.0, 20.0)), if selected { accent() } else { p.muted });
+    ui.painter().text(rect.center() + egui::vec2(0.0, 6.0), Align2::CENTER_CENTER, title, FontId::proportional(13.5), p.text);
+    ui.painter().text(rect.center() + egui::vec2(0.0, 28.0), Align2::CENTER_CENTER, detail, FontId::proportional(12.0), p.muted);
+    resp
 }

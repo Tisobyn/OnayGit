@@ -181,6 +181,7 @@ pub struct App {
     pub acct_cli: bool,
     pub launcher_msg: String,
     pub keybind_search: String,
+    pub git_src: Option<usize>,
     pub fonts_applied: (String, String),
     pub grain_tex: Option<egui::TextureHandle>,
     /// Open rail menu: kind (0 settings, 1 spaces, 2 account), anchor and the frame it opened in.
@@ -334,6 +335,7 @@ impl App {
             acct_cli: false,
             launcher_msg: String::new(),
             keybind_search: String::new(),
+            git_src: None,
             fonts_applied,
             grain_tex: None,
             rail_menu: None,
