@@ -22,7 +22,7 @@ pub fn draw_diff(
 ) -> Vec<DiffEvent> {
     let mut events = Vec::new();
     let font = FontId::monospace(size);
-    let row_h = size + 6.0;
+    let row_h = size + 5.0;
     let cw = ui.fonts(|f| f.glyph_width(&font, '0'));
     let num_w = cw * 5.0;
     let off = if selection.is_some() { cw * 3.0 } else { 0.0 };
@@ -56,7 +56,7 @@ pub fn draw_diff(
                                 rect.min + egui::vec2(cw, 2.0),
                                 egui::vec2(btn_w, row_h - 4.0),
                             );
-                            painter.rect_filled(b, 3.0, accent());
+                            painter.rect_filled(b, 4.0, accent());
                             painter.text(
                                 b.center(),
                                 Align2::CENTER_CENTER,
@@ -118,7 +118,7 @@ pub fn draw_diff(
                                 if sel.contains(&idx) {
                                     painter.rect_filled(b, 2.0, accent());
                                     paint_icon(ui, "check", b.shrink(1.0), Color32::WHITE);
-                                } else {
+                                } else if resp.hovered() {
                                     painter.rect_stroke(b, 2.0, egui::Stroke::new(1.0_f32, p.muted));
                                 }
                                 if click_x.is_some_and(|x| x <= gutter_w) {

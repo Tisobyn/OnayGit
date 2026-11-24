@@ -99,11 +99,11 @@ pub fn pal(theme: Theme) -> Pal {
             text: c(225, 228, 232),
             muted: c(149, 157, 165),
             border: c(58, 64, 70),
-            add_bg: c(25, 58, 38),
-            del_bg: c(70, 30, 34),
-            add_gut: c(34, 84, 52),
-            del_gut: c(100, 40, 46),
-            hunk_bg: c(40, 48, 58),
+            add_bg: c(27, 48, 38),
+            del_bg: c(55, 34, 38),
+            add_gut: c(32, 62, 45),
+            del_gut: c(72, 40, 46),
+            hunk_bg: c(36, 42, 50),
         },
         Theme::Midnight => Pal {
             bg: c(13, 17, 23),
@@ -115,10 +115,10 @@ pub fn pal(theme: Theme) -> Pal {
             text: c(230, 237, 243),
             muted: c(125, 133, 144),
             border: c(38, 44, 54),
-            add_bg: c(15, 45, 28),
-            del_bg: c(60, 22, 26),
-            add_gut: c(24, 70, 42),
-            del_gut: c(88, 32, 38),
+            add_bg: c(16, 36, 28),
+            del_bg: c(44, 24, 28),
+            add_gut: c(22, 54, 38),
+            del_gut: c(62, 30, 36),
             hunk_bg: c(22, 32, 48),
         },
         Theme::Nord => Pal {
@@ -131,10 +131,10 @@ pub fn pal(theme: Theme) -> Pal {
             text: c(236, 239, 244),
             muted: c(144, 155, 175),
             border: c(67, 76, 94),
-            add_bg: c(38, 68, 60),
-            del_bg: c(74, 44, 52),
-            add_gut: c(50, 88, 76),
-            del_gut: c(98, 56, 66),
+            add_bg: c(42, 62, 58),
+            del_bg: c(64, 46, 54),
+            add_gut: c(52, 78, 70),
+            del_gut: c(80, 54, 62),
             hunk_bg: c(52, 60, 76),
         },
         Theme::Light => Pal {
@@ -175,10 +175,56 @@ pub fn pal(theme: Theme) -> Pal {
 pub fn apply_visuals(ctx: &egui::Context, theme: Theme) {
     let p = pal(theme);
     let mut v = if theme.is_dark() { egui::Visuals::dark() } else { egui::Visuals::light() };
+    let ac = accent();
     v.panel_fill = p.bg;
     v.window_fill = p.bg;
     v.extreme_bg_color = p.input;
-    v.selection.bg_fill = accent();
-    v.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0_f32, p.border);
+    v.faint_bg_color = p.hover;
+    v.window_rounding = egui::Rounding::same(10.0);
+    v.window_stroke = egui::Stroke::new(1.0_f32, p.border);
+    v.window_shadow = egui::Shadow { offset: egui::vec2(0.0, 6.0), blur: 24.0, spread: 0.0, color: Color32::from_black_alpha(70) };
+    v.popup_shadow = v.window_shadow;
+    v.menu_rounding = egui::Rounding::same(8.0);
+    v.selection.bg_fill = Color32::from_rgba_unmultiplied(ac.r(), ac.g(), ac.b(), 70);
+    v.selection.stroke = egui::Stroke::new(1.0_f32, ac);
+    v.hyperlink_color = ac;
+    let r = egui::Rounding::same(6.0);
+    let w = &mut v.widgets;
+    w.noninteractive.bg_stroke = egui::Stroke::new(1.0_f32, p.border);
+    w.noninteractive.fg_stroke = egui::Stroke::new(1.0_f32, p.text);
+    for x in [&mut w.inactive, &mut w.hovered, &mut w.active, &mut w.open] {
+        x.rounding = r;
+    }
+    w.inactive.weak_bg_fill = p.hover;
+    w.inactive.bg_fill = p.hover;
+    w.inactive.bg_stroke = egui::Stroke::NONE;
+    w.inactive.fg_stroke = egui::Stroke::new(1.0_f32, p.text);
+    w.hovered.weak_bg_fill = p.border;
+    w.hovered.bg_fill = p.border;
+    w.hovered.bg_stroke = egui::Stroke::NONE;
+    w.hovered.fg_stroke = egui::Stroke::new(1.0_f32, p.text);
+    w.active.weak_bg_fill = p.border;
+    w.active.bg_stroke = egui::Stroke::new(1.0_f32, ac);
     ctx.set_visuals(v);
+
+    ctx.style_mut(|s| {
+        use egui::{FontFamily, FontId, TextStyle};
+        s.text_styles = [
+            (TextStyle::Heading, FontId::new(17.0, FontFamily::Proportional)),
+            (TextStyle::Body, FontId::new(12.5, FontFamily::Proportional)),
+            (TextStyle::Button, FontId::new(12.5, FontFamily::Proportional)),
+            (TextStyle::Small, FontId::new(10.5, FontFamily::Proportional)),
+            (TextStyle::Monospace, FontId::new(12.0, FontFamily::Monospace)),
+        ]
+        .into();
+        s.spacing.item_spacing = egui::vec2(6.0, 4.0);
+        s.spacing.button_padding = egui::vec2(9.0, 3.0);
+        s.spacing.interact_size.y = 22.0;
+        s.spacing.icon_width = 14.0;
+        s.spacing.icon_width_inner = 8.0;
+        s.spacing.window_margin = egui::Margin::same(14.0);
+        s.spacing.menu_margin = egui::Margin::same(6.0);
+        s.spacing.scroll.bar_width = 6.0;
+        s.spacing.scroll.floating = true;
+    });
 }

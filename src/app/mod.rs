@@ -307,6 +307,11 @@ impl App {
 }
 
 impl eframe::App for App {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        let c = pal(self.settings.theme).bg;
+        c.to_normalized_gamma_f32()
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let before = self.settings.clone();
         set_accent(self.settings.accent);

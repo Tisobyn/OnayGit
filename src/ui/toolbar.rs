@@ -19,7 +19,7 @@ impl App {
         let mut sync: Option<(&str, Vec<&str>)> = None;
 
         egui::TopBottomPanel::top("toolbar")
-            .exact_height(46.0)
+            .exact_height(44.0)
             .frame(
                 egui::Frame::none()
                     .fill(p.toolbar)

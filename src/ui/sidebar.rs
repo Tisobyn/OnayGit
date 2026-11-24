@@ -102,15 +102,18 @@ impl App {
                                 } else {
                                     format!("Commit {} files to {}", staged_n, self.branch)
                                 };
-                                let btn = egui::Button::new(RichText::new(label).color(Color32::WHITE).strong())
-                                    .fill(accent())
+                                let (fill, fg) = if ok { (accent(), Color32::WHITE) } else { (p.hover, p.muted) };
+                                let btn = egui::Button::new(RichText::new(label).color(fg).strong())
+                                    .fill(fill)
                                     .min_size(egui::vec2(ui.available_width(), 28.0));
                                 if ui.add_enabled(ok, btn).clicked() {
                                     do_commit = true;
                                 }
                                 if let Some((subject, body)) = self.last_commit.clone() {
                                     ui.add_space(4.0);
-                                    ui.horizontal(|ui| {
+                                    let w = ui.available_width();
+                                    ui.allocate_ui_with_layout(egui::vec2(w, 22.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                        ui.set_max_width(w);
                                         if ui.checkbox(&mut self.amend, "Amend").changed() && self.amend {
                                             if self.summary.is_empty() {
                                                 self.summary = subject.clone();
@@ -118,13 +121,9 @@ impl App {
                                             }
                                         }
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            if ui.small_button("Undo").on_hover_text("Undo last commit, keep changes").clicked() {
+                                            if ui.small_button("Undo").on_hover_text(format!("Undo \"{subject}\" and keep the changes")).clicked() {
                                                 do_undo = true;
                                             }
-                                            ui.add(
-                                                egui::Label::new(RichText::new(format!("Latest: {subject}")).size(11.0).color(p.muted))
-                                                    .truncate(),
-                                            );
                                         });
                                     });
                                 }
@@ -169,7 +168,7 @@ impl App {
                             ui.spacing_mut().item_spacing.y = 0.0;
                             for f in self.files.iter().filter(|f| q.is_empty() || f.path.to_lowercase().contains(&q)) {
                                 let sel = self.selected_file.as_deref() == Some(f.path.as_str());
-                                let fill = if sel { accent() } else { Color32::TRANSPARENT };
+                                let fill = if sel { p.hover } else { Color32::TRANSPARENT };
                                 egui::Frame::none().fill(fill).inner_margin(egui::Margin::symmetric(6.0, 1.0)).show(
                                     ui,
                                     |ui| {
@@ -187,18 +186,19 @@ impl App {
                                                 Some((d, n)) => (format!("{d}/"), n.to_string()),
                                                 None => (String::new(), f.path.clone()),
                                             };
-                                            let fg = if sel { Color32::WHITE } else { p.text };
-                                            let dim = if sel { Color32::from_rgb(220, 235, 255) } else { p.muted };
+                                            status_badge(ui, f.badge());
+                                            let fg = p.text;
+                                            let dim = p.muted;
                                             let mut job = LayoutJob::default();
                                             job.append(
                                                 &dir,
                                                 0.0,
-                                                TextFormat { font_id: FontId::proportional(13.0), color: dim, ..Default::default() },
+                                                TextFormat { font_id: FontId::proportional(12.5), color: dim, ..Default::default() },
                                             );
                                             job.append(
                                                 &name,
                                                 0.0,
-                                                TextFormat { font_id: FontId::proportional(13.0), color: fg, ..Default::default() },
+                                                TextFormat { font_id: FontId::proportional(12.5), color: fg, ..Default::default() },
                                             );
                                             let r = ui.add(egui::Label::new(job).truncate().sense(Sense::click()));
                                             if r.clicked() {
@@ -237,15 +237,7 @@ impl App {
                                                     ui.close_menu();
                                                 }
                                             });
-                                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                                let c = match f.badge() {
-                                                    'A' => Color32::from_rgb(63, 185, 80),
-                                                    'D' | '!' => Color32::from_rgb(248, 81, 73),
-                                                    _ => Color32::from_rgb(210, 153, 34),
-                                                };
-                                                let c = if sel { Color32::WHITE } else { c };
-                                                ui.label(RichText::new(f.badge().to_string()).color(c).strong().size(12.0));
-                                            });
+
                                         });
                                     },
                                 );

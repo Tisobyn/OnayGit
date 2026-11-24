@@ -10,12 +10,12 @@ pub fn two_line(label: &str, value: &str, p: &Pal) -> LayoutJob {
     j.append(
         &format!("{label}\n"),
         0.0,
-        TextFormat { font_id: FontId::proportional(10.5), color: p.muted, ..Default::default() },
+        TextFormat { font_id: FontId::proportional(10.0), color: p.muted, ..Default::default() },
     );
     j.append(
         value,
         0.0,
-        TextFormat { font_id: FontId::proportional(13.0), color: p.text, ..Default::default() },
+        TextFormat { font_id: FontId::proportional(12.5), color: p.text, ..Default::default() },
     );
     j
 }
@@ -129,4 +129,18 @@ pub fn setting_row(
     ui.add_space(10.0);
     ui.separator();
     ui.add_space(10.0);
+}
+
+/// Small colored square for a change type: modified, added, deleted, renamed, conflict.
+pub fn status_badge(ui: &mut egui::Ui, badge: char) {
+    let (color, mark) = match badge {
+        'A' => (Color32::from_rgb(63, 185, 80), "+"),
+        'D' => (Color32::from_rgb(248, 81, 73), "\u{2212}"),
+        '!' => (Color32::from_rgb(248, 81, 73), "!"),
+        'R' => (Color32::from_rgb(163, 113, 247), "\u{2192}"),
+        _ => (Color32::from_rgb(77, 150, 255), "\u{2022}"),
+    };
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(14.0, 14.0), Sense::hover());
+    ui.painter().rect_stroke(rect.shrink(0.5), 3.0, egui::Stroke::new(1.2_f32, color));
+    ui.painter().text(rect.center(), Align2::CENTER_CENTER, mark, FontId::proportional(11.0), color);
 }
