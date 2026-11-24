@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "A simple GitHub Desktop style Git client in Rust"
 authors = ["Tisobyn"]
+license = "MIT"
 repository = "https://github.com/Tisobyn/OnayGit"
 keywords = ["git", "gui", "egui"]
 categories = ["development-tools"]
