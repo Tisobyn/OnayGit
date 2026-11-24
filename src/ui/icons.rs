@@ -19,6 +19,8 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "codex" => Some(include_bytes!("../../assets/icons/codex.svg")),
         "contrast" => Some(include_bytes!("../../assets/icons/contrast.svg")),
         "copy" => Some(include_bytes!("../../assets/icons/copy.svg")),
+        "desktop" => Some(include_bytes!("../../assets/icons/desktop.svg")),
+        "grid" => Some(include_bytes!("../../assets/icons/grid.svg")),
         "direction" => Some(include_bytes!("../../assets/icons/direction.svg")),
         "folder" => Some(include_bytes!("../../assets/icons/folder.svg")),
         "github" => Some(include_bytes!("../../assets/icons/github.svg")),

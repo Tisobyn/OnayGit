@@ -42,14 +42,19 @@ pub fn rail_label(ui: &mut egui::Ui, text: &str, p: &Pal) {
 }
 
 pub fn rail_item(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &Pal) -> egui::Response {
-    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 29.0), Sense::click());
+    rail_item_h(ui, icon, text, selected, p, 29.0)
+}
+
+/// Rail item with a chosen row height.
+pub fn rail_item_h(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &Pal, h: f32) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), h), Sense::click());
     if selected || resp.hovered() {
         ui.painter().rect_filled(rect, 6.0, p.hover);
     }
-    let icon_rect = egui::Rect::from_center_size(rect.min + egui::vec2(16.0, 14.5), egui::vec2(15.0, 15.0));
+    let icon_rect = egui::Rect::from_center_size(rect.min + egui::vec2(16.0, h / 2.0), egui::vec2(15.0, 15.0));
     paint_icon(ui, icon, icon_rect, p.muted);
     ui.painter().text(
-        rect.min + egui::vec2(36.0, 14.5),
+        rect.min + egui::vec2(36.0, h / 2.0),
         Align2::LEFT_CENTER,
         text,
         FontId::proportional(13.5),
@@ -58,7 +63,7 @@ pub fn rail_item(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &
     resp
 }
 
-pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, info: Option<&RepoInfo>) -> egui::Response {
+pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, custom: bool, info: Option<&RepoInfo>) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 56.0), Sense::click());
     if resp.hovered() {
         ui.painter().rect_filled(rect, 8.0, p.hover);
@@ -70,7 +75,7 @@ pub fn repo_row(ui: &mut egui::Ui, path: &Path, p: &Pal, style: &RepoStyle, info
         Align2::CENTER_CENTER,
         repo_name(path).chars().next().unwrap_or('?').to_uppercase().to_string(),
         FontId::proportional(14.0),
-        ACCENTS[style.color % ACCENTS.len()].1,
+        if custom { ACCENTS[style.color % ACCENTS.len()].1 } else { p.muted },
     );
     ui.painter().text(rect.min + egui::vec2(56.0, 19.0), Align2::LEFT_CENTER, repo_name(path), FontId::proportional(14.0), p.text);
     ui.painter().with_clip_rect(egui::Rect::from_min_max(rect.min, egui::pos2(rect.max.x - 230.0, rect.max.y))).text(

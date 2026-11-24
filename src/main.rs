@@ -16,7 +16,7 @@ fn load_icon() -> Option<egui::IconData> {
 
 fn main() -> eframe::Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([1100.0, 700.0])
+        .with_inner_size([1280.0, 821.0])
         .with_min_inner_size([800.0, 500.0])
         .with_title("OnayGit")
         .with_fullsize_content_view(true)

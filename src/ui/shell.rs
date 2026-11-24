@@ -108,7 +108,7 @@ impl App {
                             Align2::CENTER_CENTER,
                             name.chars().next().unwrap_or('?').to_uppercase().to_string(),
                             FontId::proportional(10.5),
-                            if active { ACCENTS[style.color % ACCENTS.len()].1 } else { p.muted },
+                            if active && self.repo_styles.contains_key(path) { ACCENTS[style.color % ACCENTS.len()].1 } else { p.muted },
                         );
                         ui.painter().text(
                             rect.left_center() + egui::vec2(36.0, -1.0),
