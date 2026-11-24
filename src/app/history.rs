@@ -1,5 +1,4 @@
 //! History actions: pick commits, cherry-pick, revert, reset, rewrite, conflicts.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -25,6 +24,20 @@ pub enum ConflictAct {
 }
 
 impl App {
+    /// Load every branch and tag and the commits of the whole repository for the Graph tab.
+    pub fn load_graph(&mut self) {
+        let Some(repo) = self.repo() else { return };
+        self.graph_list = git::ref_list(&repo);
+        self.graph_commits = git::log_range(&repo, "--all");
+        let (rows, lanes) = git::graph(&self.graph_commits);
+        self.graph_rows = rows;
+        self.graph_lanes = lanes;
+        self.graph_refs.clear();
+        for (name, _, hash) in &self.graph_list {
+            self.graph_refs.entry(hash.clone()).or_default().push(name.clone());
+        }
+    }
+
     pub fn select_commit(&mut self, hash: String) {
         if let Some(repo) = self.repo() {
             self.commit_files = git::commit_files(&repo, &hash);

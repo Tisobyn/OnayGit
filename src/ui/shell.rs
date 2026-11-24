@@ -1,6 +1,5 @@
 //! Window frame in the style of 1git: tabs in the title bar, an icon rail on the left
 //! and a rounded content card.
-#[allow(unused_imports)]
 use crate::prelude::*;
 use crate::app::spaces::space_icon_name;
 use crate::ui::settings_page::space_color32;
@@ -9,6 +8,32 @@ const TITLE_H: f32 = 40.0;
 const RAIL_W: f32 = 52.0;
 const GAP: f32 = 8.0;
 const RADIUS: f32 = 12.0;
+
+/// Small pill at the bottom right of a rail button: arrow icons with counts. Empty icon name means a plain count.
+fn rail_badge(ui: &egui::Ui, rect: egui::Rect, p: &Pal, parts: &[(&str, usize)]) {
+    let parts: Vec<&(&str, usize)> = parts.iter().filter(|x| x.1 > 0).collect();
+    if parts.is_empty() {
+        return;
+    }
+    let font = FontId::proportional(10.0);
+    let widths: Vec<f32> = parts.iter().map(|(ic, n)| {
+        let t = ui.painter().layout_no_wrap(n.min(&99).to_string(), font.clone(), p.text).size().x;
+        t + if ic.is_empty() { 0.0 } else { 8.0 }
+    }).collect();
+    let w = widths.iter().sum::<f32>() + 8.0 + 3.0 * (parts.len() as f32 - 1.0);
+    let pill = egui::Rect::from_min_size(egui::pos2(rect.right() - w + 6.0, rect.bottom() - 11.0), egui::vec2(w, 14.0));
+    ui.painter().rect_filled(pill, 7.0, p.bg);
+    ui.painter().rect_stroke(pill, 7.0, egui::Stroke::new(1.0_f32, p.border));
+    let mut x = pill.left() + 4.0;
+    for ((ic, n), w) in parts.iter().zip(widths) {
+        if !ic.is_empty() {
+            paint_icon(ui, ic, egui::Rect::from_min_size(egui::pos2(x, pill.center().y - 3.5), egui::vec2(7.0, 7.0)), p.text);
+            x += 8.0;
+        }
+        ui.painter().text(egui::pos2(x, pill.center().y), Align2::LEFT_CENTER, n.min(&99).to_string(), font.clone(), p.text);
+        x += w - if ic.is_empty() { 0.0 } else { 8.0 } + 3.0;
+    }
+}
 
 fn icon_button(ui: &mut egui::Ui, name: &str, tip: &str, selected: bool, p: &Pal) -> egui::Response {
     icon_button_tint(ui, name, tip, selected, p, if selected { p.text } else { p.muted })
@@ -180,12 +205,12 @@ impl App {
 
     fn rail(&mut self, ctx: &egui::Context, p: &Pal) {
         let mut new_tab: Option<Tab> = None;
-        let mut dialog: Option<Dialog> = None;
         let mut settings = false;
         let mut home = false;
         let accounts = false;
         let mut prs = false;
-        let mut sync = false;
+        let mut sync: Option<(&str, Vec<String>)> = None;
+        let mut publish = false;
         let mut menu: Option<(u8, egui::Rect)> = None;
         egui::SidePanel::left("rail")
             .exact_width(RAIL_W)
@@ -195,34 +220,38 @@ impl App {
             .show(ctx, |ui| {
                 ui.spacing_mut().item_spacing.y = 6.0;
                 if self.screen == Screen::Repo {
-                    if icon_button(ui, "branch", "Changes", self.tab == Tab::Changes, p).clicked() {
+                    // Sync: one button for fetch, pull, push and publish, with a count badge.
+                    let (sicon, title, sub, args) = self.sync_info();
+                    let busy = self.busy.is_some();
+                    let r = icon_button(ui, sicon, &format!("{title}\n{sub}"), busy, p);
+                    let (ahead, behind) = self.ahead_behind.unwrap_or((0, 0));
+                    rail_badge(ui, r.rect, p, &[("arrowUp", ahead as usize), ("arrowDown", behind as usize)]);
+                    if r.clicked() && !busy {
+                        match args {
+                            Some((label, a)) => sync = Some((label, a)),
+                            None => publish = true,
+                        }
+                    }
+                    if icon_button(ui, "branch", "Pull requests", false, p).clicked() {
+                        prs = true;
+                    }
+                    ui.add_space(2.0);
+                    ui.separator();
+                    ui.add_space(2.0);
+                    if icon_button(ui, "tree", "Changes", self.tab == Tab::Changes, p).clicked() {
                         new_tab = Some(Tab::Changes);
                     }
                     if icon_button(ui, "history", "History", self.tab == Tab::History, p).clicked() {
                         new_tab = Some(Tab::History);
                     }
-                    if icon_button(ui, "ignored", "Ignored changes", self.tab == Tab::Ignored, p).clicked() {
-                        new_tab = Some(Tab::Ignored);
+                    let r = icon_button(ui, "archive", "Stashes", false, p);
+                    rail_badge(ui, r.rect, p, &[("", self.stashes.len())]);
+                    if r.clicked() {
+                        new_tab = Some(Tab::Changes);
+                        self.stash_open = true;
                     }
-                    ui.add_space(2.0);
-                    ui.separator();
-                    ui.add_space(2.0);
-                    if icon_button(ui, "pull", "Pull requests", false, p).clicked() {
-                        prs = true;
-                    }
-                    if icon_button(ui, "tree", "Worktrees", false, p).clicked() {
-                        dialog = Some(Dialog::Worktrees);
-                    }
-                    if icon_button(ui, "archive", "Tags", false, p).clicked() {
-                        dialog = Some(Dialog::Tags);
-                    }
-                    let tip = match self.ahead_behind {
-                        Some((0, 0)) => "Up to date. Click to fetch".to_string(),
-                        Some((a, b)) => format!("{a} to push, {b} to pull. Click to fetch"),
-                        None => "Fetch".to_string(),
-                    };
-                    if icon_button(ui, "sync", &tip, self.busy.as_deref() == Some("Fetching"), p).clicked() {
-                        sync = true;
+                    if icon_button(ui, "network", "Graph", self.tab == Tab::Graph, p).clicked() {
+                        new_tab = Some(Tab::Graph);
                     }
                 }
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
@@ -261,19 +290,22 @@ impl App {
         self.rail_menu_ui(ctx, p);
         if let Some(t) = new_tab {
             self.tab = t;
-            if t == Tab::Ignored {
-                self.load_ignored();
+            match t {
+                Tab::Ignored => self.load_ignored(),
+                Tab::Graph => self.load_graph(),
+                _ => {}
             }
         }
-        if dialog.is_some() {
-            self.dialog = dialog;
+        if publish {
+            self.open_publish();
         }
         if prs {
             self.open_pull_requests(ctx);
         }
-        if sync && self.has_remote && self.busy.is_none() {
+        if let Some((label, args)) = sync {
             if let Some(repo) = self.repo() {
-                self.spawn_in(ctx, repo, "Fetching", &["fetch", "--all", "--prune"]);
+                let a: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+                self.spawn_in(ctx, repo, label, &a);
             }
         }
         if home {

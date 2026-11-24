@@ -1,5 +1,4 @@
 //! Right side: diff of the selected file or commit.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {
@@ -12,6 +11,10 @@ impl App {
         let mut mode: Option<bool> = None;
         let mut events: Vec<DiffEvent> = Vec::new();
         let mut restore_ignored = false;
+        if self.tab == Tab::Graph {
+            self.graph_main(ctx);
+            return;
+        }
 
         egui::CentralPanel::default().frame(egui::Frame::none().fill(p.bg)).show(ctx, |ui| {
             let changes = self.tab == Tab::Changes;
@@ -191,6 +194,7 @@ impl App {
                         Tab::Ignored if self.ignored_files.is_empty() => ("No ignored files", "Files hidden by .gitignore show up here."),
                         Tab::Ignored if self.ignored_sel.is_none() => ("Select a file", "Review local changes to files git ignores."),
                         Tab::Ignored => ("No changes since the last snapshot", ""),
+                        Tab::Graph => ("", ""),
                     };
                     ui.label(RichText::new(msg).size(15.0).color(p.text));
                     if !hint.is_empty() {

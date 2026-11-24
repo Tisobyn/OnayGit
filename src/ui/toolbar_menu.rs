@@ -1,5 +1,4 @@
 //! Dropdown panels under "Current Repository" and "Current Branch".
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -78,7 +77,7 @@ impl App {
                             ui.horizontal(|ui| {
                                 ui.add_space(14.0);
                                 ui.spacing_mut().item_spacing.x = 8.0;
-                                let fw = ui.available_width() - 90.0;
+                                let fw = (ui.available_width() - 90.0).max(60.0);
                                 let r = framed(
                                     ui,
                                     &p,
@@ -193,7 +192,7 @@ impl App {
                                     ui.label(RichText::new(format!("Merge into {}", self.branch)).size(13.5).strong().color(p.text));
                                 });
                                 ui.add_space(4.0);
-                                let list_h = ui.available_height() - 56.0;
+                                let list_h = (ui.available_height() - 56.0).max(40.0);
                                 egui::ScrollArea::vertical().max_height(list_h).auto_shrink([false, false]).show(ui, |ui| {
                                     for b in self.branches.iter().filter(|b| **b != self.branch) {
                                         let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 32.0), Sense::click());
@@ -210,7 +209,7 @@ impl App {
                                 ui.add_space(10.0);
                                 ui.horizontal(|ui| {
                                     ui.add_space(14.0);
-                                    let bw = ui.available_width() - 14.0;
+                                    let bw = (ui.available_width() - 14.0).max(40.0);
                                     if ui.add(egui::Button::new(RichText::new("Cancel").strong()).min_size(egui::vec2(bw, 30.0))).clicked() {
                                         self.branch_tab = 0;
                                     }
@@ -221,7 +220,7 @@ impl App {
                             ui.horizontal(|ui| {
                                 ui.add_space(14.0);
                                 ui.spacing_mut().item_spacing.x = 8.0;
-                                let fw = ui.available_width() - 120.0;
+                                let fw = (ui.available_width() - 120.0).max(60.0);
                                 let r = framed(
                                     ui,
                                     &p,
@@ -238,7 +237,7 @@ impl App {
                             ui.add_space(6.0);
                             let q = self.branch_filter.to_lowercase();
                             let def = ["main", "master"].iter().find(|d| self.branches.iter().any(|b| b == *d)).map(|d| d.to_string());
-                            let list_h = ui.available_height() - 56.0;
+                            let list_h = (ui.available_height() - 56.0).max(40.0);
                             egui::ScrollArea::vertical().max_height(list_h).auto_shrink([false, false]).show(ui, |ui| {
                                 let row = |ui: &mut egui::Ui, name: &str, when: &str, cur: bool, local: bool, ask: &mut Option<Confirm>| -> bool {
                                     let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 32.0), Sense::click());
@@ -303,7 +302,7 @@ impl App {
                             let label = if merging { "Cancel".to_string() } else { format!("Choose a branch to merge into {}", self.branch) };
                             ui.horizontal(|ui| {
                                 ui.add_space(14.0);
-                                let bw = ui.available_width() - 14.0;
+                                let bw = (ui.available_width() - 14.0).max(40.0);
                                 if ui.add_enabled(!others.is_empty(), egui::Button::new(RichText::new(label).strong()).min_size(egui::vec2(bw, 30.0))).clicked() {
                                     self.branch_tab = if merging { 0 } else { 2 };
                                 }

@@ -1,5 +1,4 @@
 //! Commit graph: assign every commit a lane and describe the lines drawn in its row.
-#[allow(unused_imports)]
 use super::*;
 
 #[derive(Clone, Debug, Default)]
@@ -76,4 +75,32 @@ pub fn graph(commits: &[Commit]) -> (Vec<GraphRow>, usize) {
         rows.push(GraphRow { col, top, bottom, merge_from, branch_to });
     }
     (rows, width)
+}
+
+/// Branches and tags with the commit each one points at: (name, kind 1 local / 2 remote / 3 tag, hash).
+pub fn ref_list(repo: &Path) -> Vec<(String, u8, String)> {
+    run(repo, &["for-each-ref", "--format=%(refname)%09%(objectname)%09%(*objectname)"])
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| {
+            let mut p = l.split('\t');
+            let full = p.next()?;
+            let obj = p.next()?;
+            let peeled = p.next().unwrap_or("");
+            let hash = if peeled.is_empty() { obj } else { peeled }.to_string();
+            let (kind, name) = if let Some(n) = full.strip_prefix("refs/heads/") {
+                (1, n)
+            } else if let Some(n) = full.strip_prefix("refs/remotes/") {
+                if n.ends_with("/HEAD") {
+                    return None;
+                }
+                (2, n)
+            } else if let Some(n) = full.strip_prefix("refs/tags/") {
+                (3, n)
+            } else {
+                return None;
+            };
+            Some((name.to_string(), kind, hash))
+        })
+        .collect()
 }

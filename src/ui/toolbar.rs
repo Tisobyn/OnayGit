@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 use crate::ui::toolbar_menu::{tb_cell, TbMenu};
 
@@ -7,10 +6,8 @@ impl App {
         self.tour_rects[1] = None;
         let p = self.pal();
         let mut goto_settings = false;
-        let mut open_pub = false;
-        let remote = self.remote_name.clone();
         let rstyle = self.repo().map(|r| self.style_of(&r));
-        let mut sync: Option<(&str, Vec<&str>)> = None;
+        let mut open_wt = false;
         let mut toggle: Option<TbMenu> = None;
         let mut cells = [egui::Rect::NOTHING; 2];
 
@@ -52,61 +49,13 @@ impl App {
                     self.tour_rects[0] = Some(cells[1]);
                     toolbar_divider(ui);
 
-                    // Sync block (Fetch / Pull / Push / Publish like GitHub Desktop)
-                    let (title, sub, args): (String, String, Option<(&str, Vec<&str>)>) = if !self.has_remote {
-                        ("Publish repository".to_string(), "Create it on GitHub or GitLab".into(), None)
-                    } else {
-                        match self.ahead_behind {
-                            None => (
-                                "Publish branch".to_string(),
-                                format!("Push to {remote}"),
-                                Some(("Publishing", vec!["push", "-u", remote.as_str(), "HEAD"])),
-                            ),
-                            Some((_, b)) if b > 0 => (
-                                format!("Pull {remote}"),
-                                format!("{b} commits behind"),
-                                Some(("Pulling", vec!["pull", "--no-rebase", "--no-edit"])),
-                            ),
-                            Some((a, _)) if a > 0 => (
-                                format!("Push {remote}"),
-                                format!("{a} commits ahead"),
-                                Some(("Pushing", vec!["push"])),
-                            ),
-                            _ => (
-                                format!("Fetch {remote}"),
-                                ago(self.last_fetched),
-                                Some(("Fetching", vec!["fetch", "--all", "--prune"])),
-                            ),
-                        }
-                    };
-                    let no_remote = !self.has_remote;
-                    let enabled = (args.is_some() || no_remote) && self.busy.is_none();
-                    let label = if let Some(b) = &self.busy {
-                        two_line(&format!("{b}..."), "Please wait", &p)
-                    } else {
-                        two_line(&title, &sub, &p)
-                    };
-                    let sync_icon = if title.starts_with("Publish") {
-                        "publish"
-                    } else if title.starts_with("Pull") {
-                        "pull"
-                    } else if title.starts_with("Push") {
-                        "push"
-                    } else {
-                        "sync"
-                    };
-                    icon(ui, sync_icon, 18.0, p.muted);
-                    if ui.add_enabled(enabled, egui::Button::new(label)).clicked() {
-                        if no_remote {
-                            open_pub = true;
-                        } else {
-                            sync = args;
-                        }
+                    // Worktrees
+                    icon(ui, "layers", 18.0, p.muted);
+                    let n = self.worktrees.len().max(1);
+                    let sub = if n == 1 { "1 checkout".to_string() } else { format!("{n} checkouts") };
+                    if ui.add(egui::Button::new(two_line("Worktrees", &sub, &p))).clicked() {
+                        open_wt = true;
                     }
-                    if self.busy.is_some() {
-                        ui.spinner();
-                    }
-
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.add_space(6.0);
                         let (rect, resp) = ui.allocate_exact_size(egui::vec2(28.0, 28.0), Sense::click());
@@ -126,16 +75,26 @@ impl App {
         }
         self.tb_menus(ctx, cells);
 
-        if open_pub {
-            self.open_publish();
-        }
         if goto_settings {
             self.open_settings();
         }
-        if let Some((label, args)) = sync {
-            if let Some(repo) = self.repo() {
-                self.spawn_in(ctx, repo, label, &args);
-            }
+        if open_wt {
+            self.dialog = Some(Dialog::Worktrees);
+        }
+    }
+
+    /// What the sync button does now: (icon, title, subtitle, git args). No args and a remote means busy or nothing to do.
+    pub fn sync_info(&self) -> (&'static str, String, String, Option<(&'static str, Vec<String>)>) {
+        let remote = self.remote_name.clone();
+        let args = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        if !self.has_remote {
+            return ("publish", "Publish repository".into(), "Create it on GitHub or GitLab".into(), None);
+        }
+        match self.ahead_behind {
+            None => ("publish", "Publish branch".into(), format!("Push to {remote}"), Some(("Publishing", vec!["push".into(), "-u".into(), remote, "HEAD".into()]))),
+            Some((_, b)) if b > 0 => ("pull", format!("Pull {remote}"), format!("{b} commits behind"), Some(("Pulling", args(&["pull", "--no-rebase", "--no-edit"])))),
+            Some((a, _)) if a > 0 => ("push", format!("Push {remote}"), format!("{a} commits ahead"), Some(("Pushing", args(&["push"])))),
+            _ => ("sync", format!("Fetch {remote}"), ago(self.last_fetched), Some(("Fetching", args(&["fetch", "--all", "--prune"])))),
         }
     }
 }

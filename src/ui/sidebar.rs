@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {
@@ -40,6 +39,7 @@ impl App {
                         Tab::Changes => "Changes",
                         Tab::History => "History",
                         Tab::Ignored => "Ignored changes",
+                        Tab::Graph => "Branches and tags",
                     };
                     ui.label(RichText::new(title).size(14.0).color(p.text));
                     if self.tab == Tab::History {
@@ -49,7 +49,7 @@ impl App {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.add_space(8.0);
                         for (name, tip) in [("search", "Filter"), ("sync", "Refresh"), ("list", "Group by folder")] {
-                            if name == "list" && self.tab == Tab::History {
+                            if (name == "list" && self.tab == Tab::History) || (self.tab == Tab::Graph && name != "sync") {
                                 continue;
                             }
                             let (rect, resp) = ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
@@ -335,6 +335,7 @@ impl App {
                     }
                     Tab::History => self.history_tab(ui, &p),
                     Tab::Ignored => self.ignored_tab(ui, &p),
+                    Tab::Graph => self.graph_sidebar(ui, &p),
                 }
             });
 

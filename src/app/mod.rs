@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 pub mod accounts;
@@ -29,6 +28,7 @@ pub enum Tab {
     Changes,
     History,
     Ignored,
+    Graph,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -272,6 +272,16 @@ pub struct App {
     pub repo_filter: String,
     pub branch_tab: u8,
     pub branch_dates: HashMap<String, String>,
+    pub graph_commits: Vec<Commit>,
+    pub graph_rows: Vec<git::GraphRow>,
+    pub graph_lanes: usize,
+    /// Commit hash -> branch and tag names pointing at it.
+    pub graph_refs: HashMap<String, Vec<String>>,
+    /// (name, kind 1 local / 2 remote / 3 tag, commit hash)
+    pub graph_list: Vec<(String, u8, String)>,
+    pub graph_find: String,
+    pub graph_kind: u8,
+    pub graph_scroll: Option<usize>,
 
     pub status_msg: String,
     pub busy: Option<String>,
@@ -459,6 +469,14 @@ impl App {
             repo_filter: String::new(),
             branch_tab: 0,
             branch_dates: HashMap::new(),
+            graph_commits: vec![],
+            graph_rows: vec![],
+            graph_lanes: 1,
+            graph_refs: HashMap::new(),
+            graph_list: vec![],
+            graph_find: String::new(),
+            graph_kind: 0,
+            graph_scroll: None,
             status_msg: String::new(),
             busy: None,
             tx,
@@ -663,6 +681,9 @@ impl eframe::App for App {
         self.coauthor_popup(ctx);
 
         self.tab_shortcuts(ctx);
+        if self.screen != Screen::Repo {
+            self.tb_menu = None;
+        }
         match self.screen {
             Screen::Home => {
                 self.shell(ctx);

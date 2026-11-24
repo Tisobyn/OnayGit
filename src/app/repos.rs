@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {
@@ -107,6 +106,9 @@ impl App {
             self.compare_counts = git::compare_counts(&repo, &other);
         } else {
             self.compare_commits.clear();
+        }
+        if self.tab == Tab::Graph {
+            self.load_graph();
         }
     }
 
