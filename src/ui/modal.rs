@@ -97,3 +97,21 @@ pub fn plain_button(ui: &mut egui::Ui, p: &Pal, text: &str) -> egui::Response {
 pub fn danger_button(ui: &mut egui::Ui, text: &str) -> egui::Response {
     ui.add(egui::Button::new(RichText::new(text).color(Color32::WHITE)).fill(Color32::from_rgb(200, 50, 50)).min_size(egui::vec2(0.0, 30.0)))
 }
+
+/// Row of dialog buttons aligned to the right. Add the main button first.
+pub fn button_row(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+    ui.add_space(14.0);
+    let w = ui.available_width();
+    ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), add);
+}
+
+/// Bordered multi-line field.
+pub fn dialog_area(ui: &mut egui::Ui, text: &mut String, hint: &str, rows: usize) -> egui::Response {
+    ui.add(egui::TextEdit::multiline(text).hint_text(hint).desired_rows(rows).desired_width(f32::INFINITY).margin(egui::vec2(12.0, 10.0)))
+}
+
+/// Small section title inside a dialog.
+pub fn dialog_section(ui: &mut egui::Ui, p: &Pal, text: &str) {
+    ui.add_space(10.0);
+    ui.label(RichText::new(text).size(13.0).strong().color(p.text));
+}

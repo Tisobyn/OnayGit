@@ -402,6 +402,23 @@ impl App {
                     app.open_repo(r);
                 }
             }
+            Ok(m) if m.starts_with("dialog:") => {
+                if let Some(r) = app.repos.first().cloned() {
+                    app.open_repo(r);
+                    app.refresh();
+                }
+                match &m["dialog:".len()..] {
+                    "tags" => app.dialog = Some(Dialog::Tags),
+                    "worktrees" => app.dialog = Some(Dialog::Worktrees),
+                    "publish" => app.dialog = Some(Dialog::Publish),
+                    "reword" => {
+                        app.reword_text = "Update readme".into();
+                        app.dialog = Some(Dialog::Reword);
+                    }
+                    "welcome" => app.settings.onboarded = false,
+                    _ => {}
+                }
+            }
             Ok("machine") => app.dialog = Some(Dialog::AddMachine),
             Ok("clone") => {
                 app.screen = Screen::Home;

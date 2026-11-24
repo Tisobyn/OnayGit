@@ -46,36 +46,31 @@ impl App {
         }
         let p = self.pal();
         let mut done = false;
-        egui::Window::new("Welcome to OnayGit")
-            .collapsible(false)
-            .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                ui.set_width(400.0);
-                ui.label(RichText::new("A simple Git client. Here is how it works:").color(p.muted));
-                ui.add_space(10.0);
-                for (ic, title, text) in [
-                    ("folder", "Add a repository", "Open from disk, clone, or scan a folder."),
-                    ("check", "Review and commit", "Tick files, write a summary, press Commit."),
-                    ("push", "Sync", "Fetch, pull and push from the top bar."),
-                    ("history", "Explore history", "Graph, compare branches, cherry-pick and more."),
-                ] {
-                    ui.horizontal(|ui| {
-                        icon(ui, ic, 22.0, accent());
-                        ui.vertical(|ui| {
-                            ui.label(RichText::new(title).strong());
-                            ui.label(RichText::new(text).size(12.0).color(p.muted));
-                        });
+        let close = modal(ctx, &p, "welcome", 480.0, Place::Center, "Welcome to OnayGit", "A simple Git client. Here is how it works:", |ui| {
+            for (ic, title, text) in [
+                ("folder", "Add a repository", "Open from disk, clone, or scan a folder."),
+                ("check", "Review and commit", "Tick files, write a summary, press Commit."),
+                ("push", "Sync", "Fetch, pull and push from the top bar."),
+                ("history", "Explore history", "Graph, compare branches, cherry-pick and more."),
+            ] {
+                ui.horizontal(|ui| {
+                    icon(ui, ic, 20.0, p.muted);
+                    ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = 1.0;
+                        ui.label(RichText::new(title).size(13.5).color(p.text));
+                        ui.label(RichText::new(text).size(12.5).color(p.muted));
                     });
-                    ui.add_space(6.0);
-                }
-                ui.checkbox(&mut self.settings.tips, "Show guided tips");
+                });
                 ui.add_space(8.0);
-                let btn = egui::Button::new(RichText::new("Get started").color(Color32::WHITE).strong()).fill(accent());
-                if ui.add(btn).clicked() {
+            }
+            ui.checkbox(&mut self.settings.tips, "Show guided tips");
+            button_row(ui, |ui| {
+                if primary_button(ui, "Get started", true).clicked() {
                     done = true;
                 }
             });
+        });
+        done |= close;
         if done {
             self.settings.onboarded = true;
         }

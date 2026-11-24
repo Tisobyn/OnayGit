@@ -21,112 +21,106 @@ impl App {
 
     pub fn publish_window(&mut self, ctx: &egui::Context) {
         let p = self.pal();
-        let mut open = true;
         let mut go = false;
-        egui::Window::new("Publish repository")
-            .open(&mut open)
-            .collapsible(false)
-            .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                if self.accounts.is_empty() {
-                    ui.label("Add a GitHub or GitLab account first (Settings > Accounts).");
-                    return;
-                }
-                if self.publish_account >= self.accounts.len() {
-                    self.publish_account = 0;
-                }
-                ui.label("Account");
-                egui::ComboBox::from_id_salt("publish_acc")
-                    .selected_text(format!("{} ({})", self.accounts[self.publish_account].user, self.accounts[self.publish_account].host))
-                    .show_ui(ui, |ui| {
-                        for (i, a) in self.accounts.iter().enumerate() {
-                            ui.selectable_value(&mut self.publish_account, i, format!("{} ({})", a.user, a.host));
-                        }
-                    });
-                ui.label("Name");
-                ui.add(egui::TextEdit::singleline(&mut self.publish_name).desired_width(340.0));
-                ui.label("Description");
-                ui.add(egui::TextEdit::singleline(&mut self.publish_desc).desired_width(340.0));
-                ui.checkbox(&mut self.publish_private, "Keep this code private");
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    let busy = self.task_running(T_PUBLISH);
-                    if ui.add_enabled(!busy && !self.publish_name.trim().is_empty(), egui::Button::new("Publish repository")).clicked() {
-                        go = true;
-                    }
-                    if busy {
-                        ui.spinner();
+        let mut cancel = false;
+        let close = modal(ctx, &p, "publish", 480.0, Place::Center, "Publish repository", "Create it on GitHub or GitLab and push.", |ui| {
+            if self.accounts.is_empty() {
+                ui.label(RichText::new("Add a GitHub or GitLab account first (Settings > Accounts).").color(p.muted));
+                return;
+            }
+            if self.publish_account >= self.accounts.len() {
+                self.publish_account = 0;
+            }
+            ui.label(RichText::new("Account").size(13.0).strong().color(p.text));
+            egui::ComboBox::from_id_salt("publish_acc")
+                .width(ui.available_width() - 8.0)
+                .selected_text(format!("{} ({})", self.accounts[self.publish_account].user, self.accounts[self.publish_account].host))
+                .show_ui(ui, |ui| {
+                    for (i, a) in self.accounts.iter().enumerate() {
+                        ui.selectable_value(&mut self.publish_account, i, format!("{} ({})", a.user, a.host));
                     }
                 });
-                if !self.status_msg.is_empty() {
-                    ui.label(RichText::new(&self.status_msg).color(p.muted));
+            dialog_field(ui, &p, "Name", &mut self.publish_name, "");
+            dialog_field(ui, &p, "Description", &mut self.publish_desc, "");
+            ui.add_space(8.0);
+            ui.checkbox(&mut self.publish_private, "Keep this code private");
+            if !self.status_msg.is_empty() {
+                ui.add_space(6.0);
+                ui.label(RichText::new(&self.status_msg).size(12.5).color(p.muted));
+            }
+            let busy = self.task_running(T_PUBLISH);
+            button_row(ui, |ui| {
+                if primary_button(ui, "Publish repository", !busy && !self.publish_name.trim().is_empty()).clicked() {
+                    go = true;
+                }
+                if plain_button(ui, &p, "Cancel").clicked() {
+                    cancel = true;
+                }
+                if busy {
+                    ui.spinner();
                 }
             });
+        });
         if go {
             self.publish(ctx);
         }
-        if !open {
+        if close || cancel {
             self.dialog = None;
         }
     }
 
     pub fn pull_requests_window(&mut self, ctx: &egui::Context) {
         let p = self.pal();
-        let mut open = true;
         let mut create = false;
         let mut reload = false;
         let mut url: Option<String> = None;
-        egui::Window::new("Pull requests")
-            .open(&mut open)
-            .collapsible(false)
-            .default_width(520.0)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("Open").size(15.0));
-                    if ui.small_button("Reload").clicked() {
-                        reload = true;
-                    }
-                    if self.task_running(T_PRS) {
-                        ui.spinner();
-                    }
-                });
-                if !self.pr_error.is_empty() {
-                    ui.label(RichText::new(&self.pr_error).color(p.muted));
-                } else if self.prs.is_empty() && !self.task_running(T_PRS) {
-                    ui.label(RichText::new("No open pull requests.").color(p.muted));
+        let close = modal(ctx, &p, "pull_requests", 580.0, Place::Center, "Pull requests", "", |ui| {
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("Open").size(13.0).strong().color(p.text));
+                if ui.small_button("Reload").clicked() {
+                    reload = true;
                 }
-                egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
-                    for pr in &self.prs {
-                        ui.horizontal(|ui| {
-                            ui.label(format!("#{} {}", pr.number, pr.title));
-                            ui.label(RichText::new(format!("{} > {} by {}", pr.head, pr.base, pr.author)).size(11.5).color(p.muted));
+                if self.task_running(T_PRS) {
+                    ui.spinner();
+                }
+            });
+            if !self.pr_error.is_empty() {
+                ui.label(RichText::new(&self.pr_error).color(p.muted));
+            } else if self.prs.is_empty() && !self.task_running(T_PRS) {
+                ui.label(RichText::new("No open pull requests.").color(p.muted));
+            }
+            egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
+                for pr in &self.prs {
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(format!("#{} {}", pr.number, pr.title)).size(13.5).color(p.text));
+                            ui.label(RichText::new(format!("{} > {} by {}", pr.head, pr.base, pr.author)).size(12.0).color(p.muted));
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.small_button("Open in browser").clicked() {
                                 url = Some(pr.url.clone());
                             }
                         });
-                    }
-                });
-                ui.separator();
-                ui.label(RichText::new(format!("New pull request from {}", self.branch)).size(15.0));
-                ui.horizontal(|ui| {
-                    ui.label("Base");
-                    ui.add(egui::TextEdit::singleline(&mut self.pr_base).desired_width(120.0));
-                });
-                ui.add(egui::TextEdit::singleline(&mut self.pr_title).hint_text("Title").desired_width(f32::INFINITY));
-                ui.add(egui::TextEdit::multiline(&mut self.pr_body).hint_text("Description").desired_rows(3).desired_width(f32::INFINITY));
-                ui.horizontal(|ui| {
-                    let busy = self.task_running(T_NEW_PR);
-                    let ok = !busy && !self.pr_title.trim().is_empty() && !self.pr_base.trim().is_empty();
-                    if ui.add_enabled(ok, egui::Button::new("Push and create")).clicked() {
-                        create = true;
-                    }
-                    if busy {
-                        ui.spinner();
-                    }
-                });
+                    });
+                }
             });
+            dialog_section(ui, &p, &format!("New pull request from {}", self.branch));
+            dialog_field(ui, &p, "Base", &mut self.pr_base, "main");
+            dialog_field(ui, &p, "Title", &mut self.pr_title, "");
+            ui.add_space(6.0);
+            dialog_area(ui, &mut self.pr_body, "Description", 3);
+            let busy = self.task_running(T_NEW_PR);
+            let ok = !busy && !self.pr_title.trim().is_empty() && !self.pr_base.trim().is_empty();
+            button_row(ui, |ui| {
+                if primary_button(ui, "Push and create", ok).clicked() {
+                    create = true;
+                }
+                if busy {
+                    ui.spinner();
+                }
+            });
+        });
         if let Some(u) = url {
             open_url(&u);
         }
@@ -136,7 +130,7 @@ impl App {
         if create {
             self.create_pr(ctx);
         }
-        if !open {
+        if close {
             self.dialog = None;
         }
     }
