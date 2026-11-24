@@ -210,6 +210,8 @@ Things a user of a Git client will ask for, from most to least asked:
 
 ## To-do list (in order)
 
+**Status after the follow-up round:** done = 1, 2, 3, 4, 5, 7, 8, 9 (drop a folder), 12, 16. Not done: 6, 9 (`onaygit .` into the running app), 10, 11, 13, 14, 15, 17 to 20. Items 13 to 15 need an Apple Developer ID and a decision to publish a release.
+
 **Next (stability and speed)**
 1. Move `refresh()` off the UI thread, or split it by visible tab.
 2. Page the History and Graph lists.
