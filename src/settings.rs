@@ -9,6 +9,8 @@ pub struct Settings {
     pub auto_theme: bool,
     pub scrollbars: bool,
     pub smooth: bool,
+    /// Stage every changed file when committing.
+    pub auto_include: bool,
     pub accent: usize,
     pub tips: bool,
     pub onboarded: bool,
@@ -26,6 +28,7 @@ impl Default for Settings {
             auto_theme: false,
             scrollbars: true,
             smooth: true,
+            auto_include: false,
             accent: 0,
             tips: true,
             onboarded: false,
@@ -59,6 +62,7 @@ impl Settings {
                 "dark" => s.theme = if v == "true" { Theme::Dark } else { Theme::Light },
                 "scrollbars" => s.scrollbars = v == "true",
                 "smooth" => s.smooth = v == "true",
+                "auto_include" => s.auto_include = v == "true",
                 "auto_theme" => s.auto_theme = v == "true",
                 "theme" => s.theme = Theme::from_key(v).unwrap_or(Theme::Dark),
                 "accent" => s.accent = v.parse().unwrap_or(0),
@@ -80,11 +84,12 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
             self.smooth,
+            self.auto_include,
             self.accent,
             self.tips,
             self.onboarded,

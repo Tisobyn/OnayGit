@@ -63,12 +63,18 @@ impl App {
                 .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(18.0)))
                 .show(ctx, |ui| self.account_add_panel(ctx, ui, &p));
         }
+        self.space_dialog_ui(ctx);
 
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 24.0, right: 32.0, top: 20.0, bottom: 20.0 }))
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                    ui.set_max_width(580.0);
+                    ui.set_max_width(match self.section {
+                        Section::Spaces | Section::Git | Section::Editor | Section::Ai | Section::Accounts => 480.0,
+                        Section::Privacy | Section::Help => 560.0,
+                        Section::Keybinds => 760.0,
+                        _ => 580.0,
+                    });
                     match self.section {
                         Section::Application => self.application_page(ui, &p),
                         Section::Spaces => self.spaces_page(ui, &p),
@@ -164,9 +170,15 @@ impl App {
     }
 
     fn spaces_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Spaces", "Named groups of repositories shown on the home screen.", |_| {});
-        let mut remove: Option<usize> = None;
-        let count = format!("{}", self.spaces.len());
+        let mut new = false;
+        page_header(ui, p, "Spaces", "Keep separate repositories and tabs for each part of your day.", |ui| {
+            if ui.button("New space...").clicked() {
+                new = true;
+            }
+        });
+        let mut edit: Option<usize> = None;
+        let mut switch: Option<usize> = None;
+        let count = format!("{} space{}", self.spaces.len(), if self.spaces.len() == 1 { "" } else { "s" });
         settings_group(ui, p, "Spaces", &count, |_| {}, |ui| {
             if self.spaces.is_empty() {
                 group_row(ui, p, |ui| {
@@ -176,27 +188,90 @@ impl App {
             for (i, s) in self.spaces.iter().enumerate() {
                 group_row(ui, p, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new(&s.name).color(p.text));
-                        ui.label(RichText::new(format!("{} repositories", s.repos.len())).size(12.0).color(p.muted));
+                        icon(ui, "layers", 18.0, p.muted);
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(&s.name).color(p.text));
+                            let n = s.repos.len();
+                            ui.label(RichText::new(format!("{n} repositor{}", if n == 1 { "y" } else { "ies" })).size(12.0).color(p.muted));
+                        });
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button("Delete").clicked() {
-                                remove = Some(i);
+                            if self.selected_space == Some(i) {
+                                ui.label(RichText::new("Current").size(12.5).color(p.muted));
+                            } else if ui.button("Switch").clicked() {
+                                switch = Some(i);
+                            }
+                            if ui.button("Edit...").clicked() {
+                                edit = Some(i);
                             }
                         });
                     });
                 });
             }
-            group_row(ui, p, |ui| {
+        });
+        if new {
+            self.space_name.clear();
+            self.space_dialog = Some(None);
+        }
+        if let Some(i) = edit {
+            self.space_name = self.spaces[i].name.clone();
+            self.space_dialog = Some(Some(i));
+        }
+        if let Some(i) = switch {
+            self.selected_space = Some(i);
+        }
+    }
+
+    fn space_dialog_ui(&mut self, ctx: &egui::Context) {
+        let Some(target) = self.space_dialog else { return };
+        let mut save = false;
+        let mut delete = false;
+        let mut close = false;
+        egui::Window::new(if target.is_some() { "Edit space" } else { "New space" })
+            .collapsible(false)
+            .resizable(false)
+            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.set_width(280.0);
+                ui.label("Name");
+                let r = ui.add(egui::TextEdit::singleline(&mut self.space_name).desired_width(f32::INFINITY));
+                if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    save = true;
+                }
+                ui.add_space(8.0);
                 ui.horizontal(|ui| {
-                    ui.add(egui::TextEdit::singleline(&mut self.space_name).hint_text("New space name").desired_width(240.0));
-                    if ui.button("Add space").clicked() {
-                        self.add_space();
+                    if ui.button("Save").clicked() {
+                        save = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                    if target.is_some() {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button(RichText::new("Delete").color(Color32::from_rgb(220, 90, 90))).clicked() {
+                                delete = true;
+                            }
+                        });
                     }
                 });
             });
-        });
-        if let Some(i) = remove {
-            self.remove_space(i);
+        if save {
+            match target {
+                Some(i) => {
+                    let n = self.space_name.clone();
+                    self.rename_space(i, &n);
+                }
+                None => self.add_space(),
+            }
+            close = true;
+        }
+        if delete {
+            if let Some(i) = target {
+                self.remove_space(i);
+            }
+            close = true;
+        }
+        if close {
+            self.space_dialog = None;
         }
     }
 
@@ -303,67 +378,125 @@ impl App {
     }
 
     fn keybinds_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Keybinds", "Keyboard shortcuts.", |_| {});
-        ui.add(egui::TextEdit::singleline(&mut self.keybind_search).hint_text("Search shortcuts").desired_width(f32::INFINITY));
-        ui.add_space(12.0);
+        page_header(ui, p, "Keybinds", "Keyboard shortcuts. Changing them is not available yet.", |_| {});
+        ui.add(egui::TextEdit::singleline(&mut self.keybind_search).hint_text("Find an action or shortcut...").desired_width(f32::INFINITY));
+        ui.add_space(14.0);
         let q = self.keybind_search.to_lowercase();
-        let all = [
-            ("Switch repository", "Cmd+P"),
-            ("New tab", "Cmd+T"),
-            ("Close tab", "Cmd+W"),
-            ("Changes", "Cmd+1"),
-            ("History", "Cmd+2"),
-            ("Settings", "Cmd+,"),
+        let groups: [(&str, &[(&str, &str)]); 2] = [
+            ("Application", &[("Open Settings", "\u{2318},"), ("Find repository or action", "\u{2318}P")]),
+            ("Tabs", &[("New tab", "\u{2318}T"), ("Close tab", "\u{2318}W"), ("Changes", "\u{2318}1"), ("History", "\u{2318}2")]),
         ];
-        settings_group(ui, p, "General", "", |_| {}, |ui| {
-            for (name, key) in all.iter().filter(|(n, k)| q.is_empty() || n.to_lowercase().contains(&q) || k.to_lowercase().contains(&q)) {
-                group_row(ui, p, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new(*name).color(p.text));
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.label(RichText::new(*key).monospace().color(p.muted));
+        for (title, rows) in groups {
+            let rows: Vec<&(&str, &str)> = rows.iter().filter(|(n, k)| q.is_empty() || n.to_lowercase().contains(&q) || k.to_lowercase().contains(&q)).collect();
+            if rows.is_empty() {
+                continue;
+            }
+            let count = format!("{} shortcut{}", rows.len(), if rows.len() == 1 { "" } else { "s" });
+            settings_group(ui, p, title, &count, |_| {}, |ui| {
+                for (name, key) in rows {
+                    group_row(ui, p, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(*name).size(13.5).color(p.text));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                key_chip(ui, p, key);
+                            });
                         });
                     });
-                });
-            }
-        });
+                }
+            });
+        }
     }
 
     fn git_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Git", "Your global identity, used for new commits.", |_| {});
-        settings_group(ui, p, "Identity", "global git config", |_| {}, |ui| {
+        page_header(ui, p, "Git", "", |_| {});
+        settings_group(ui, p, "Committing", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
-                field_label(ui, p, "Name");
-                ui.add(egui::TextEdit::singleline(&mut self.git_name).desired_width(f32::INFINITY));
-                field_label(ui, p, "Email");
-                ui.add(egui::TextEdit::singleline(&mut self.git_email).desired_width(f32::INFINITY));
-                ui.add_space(6.0);
-                if ui.button("Save identity").clicked() {
-                    let a = git::config_set("user.name", self.git_name.trim());
-                    let b = git::config_set("user.email", self.git_email.trim());
-                    if let Err(e) = a.and(b) {
-                        self.status_msg = e;
-                    }
+                toggle_row(ui, p, "Automatically include changed files", "Include all changed files in your next commit automatically.", &mut self.settings.auto_include);
+            });
+        });
+        let mut save = false;
+        let mut cancel = false;
+        let mut edit = false;
+        settings_group(ui, p, "Identity", "", |_| {}, |ui| {
+            group_row(ui, p, |ui| {
+                if self.git_editing {
+                    field_label(ui, p, "Name");
+                    ui.add(egui::TextEdit::singleline(&mut self.git_name).desired_width(f32::INFINITY));
+                    field_label(ui, p, "Email");
+                    ui.add(egui::TextEdit::singleline(&mut self.git_email).desired_width(f32::INFINITY));
+                    ui.add_space(6.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            save = true;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            cancel = true;
+                        }
+                    });
+                } else {
+                    ui.horizontal(|ui| {
+                        let (r, _) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), Sense::hover());
+                        ui.painter().circle_filled(r.center(), 16.0, p.hover);
+                        let letter = self.git_name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_else(|| "?".into());
+                        ui.painter().text(r.center(), Align2::CENTER_CENTER, letter, FontId::proportional(13.0), p.text);
+                        ui.vertical(|ui| {
+                            let name = if self.git_name.is_empty() { "Not set" } else { self.git_name.as_str() };
+                            ui.label(RichText::new(name).size(13.5).color(p.text));
+                            ui.label(RichText::new(&self.git_email).size(12.0).color(p.muted));
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button("Edit").clicked() {
+                                edit = true;
+                            }
+                        });
+                    });
                 }
             });
         });
+        if edit {
+            self.git_editing = true;
+        }
+        if cancel {
+            self.git_editing = false;
+        }
+        if save {
+            let a = git::config_set("user.name", self.git_name.trim());
+            let b = git::config_set("user.email", self.git_email.trim());
+            match a.and(b) {
+                Ok(_) => self.git_editing = false,
+                Err(e) => self.status_msg = e,
+            }
+        }
     }
 
     fn editor_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "External editor", "Used by Open in editor.", |_| {});
+        page_header(ui, p, "External editor", "", |_| {});
+        let known = [("System default", "open", "pencil"), ("VS Code", "code", "terminal"), ("Cursor", "cursor", "terminal"), ("Zed", "zed", "terminal"), ("Sublime Text", "subl", "terminal"), ("Xcode", "open -a Xcode", "terminal")];
+        let mut choose: Option<String> = None;
+        let mut other = false;
         settings_group(ui, p, "Default editor", "", |_| {}, |ui| {
-            group_row(ui, p, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    for (label, cmd) in [("VS Code", "code"), ("Cursor", "cursor"), ("Zed", "zed"), ("Sublime", "subl"), ("Xcode", "open -a Xcode")] {
-                        if ui.selectable_label(self.settings.editor == cmd, label).clicked() {
-                            self.settings.editor = cmd.to_string();
-                        }
-                    }
-                });
-                field_label(ui, p, "Command");
-                ui.add(egui::TextEdit::singleline(&mut self.settings.editor).desired_width(f32::INFINITY));
-            });
+            ui.spacing_mut().item_spacing.y = 0.0;
+            for (label, cmd, ic) in known {
+                if list_row(ui, p, ic, label, self.settings.editor == cmd, true).clicked() {
+                    choose = Some(cmd.to_string());
+                }
+            }
+            if !known.iter().any(|(_, c, _)| *c == self.settings.editor) {
+                let label = self.settings.editor.trim_start_matches("open -a ").trim_matches('\'').rsplit('/').next().unwrap_or("").trim_end_matches(".app").to_string();
+                list_row(ui, p, "pencil", &label, true, true);
+            }
+            if list_row(ui, p, "add", "Other application...", false, false).clicked() {
+                other = true;
+            }
         });
+        if other {
+            if let Some(app) = rfd::FileDialog::new().set_directory("/Applications").add_filter("Application", &["app"]).pick_file() {
+                choose = Some(format!("open -a {}", git::quote(&app.to_string_lossy())));
+            }
+        }
+        if let Some(c) = choose {
+            self.settings.editor = c;
+        }
     }
 
     fn ignore_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
@@ -523,58 +656,94 @@ impl App {
     }
 
     fn help_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
-        page_header(ui, p, "Help", "Getting started and support.", |_| {});
+        page_header(ui, p, "Help", "Guides, setup, and support for OnayGit.", |_| {});
+        let mut url: Option<&str> = None;
         settings_group(ui, p, "Getting started", "", |_| {}, |ui| {
-            group_row(ui, p, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("Guided tips").color(p.text));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.checkbox(&mut self.settings.tips, "");
-                    });
-                });
-            });
-            group_row(ui, p, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("First-run setup").color(p.text));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Run again").clicked() {
-                            self.settings.onboarded = false;
-                        }
-                    });
-                });
-            });
-        });
-        settings_group(ui, p, "Support", &format!("OnayGit {}", env!("CARGO_PKG_VERSION")), |_| {}, |ui| {
-            for (label, url) in [
-                ("Source code", "https://github.com/Tisobyn/OnayGit"),
-                ("Report an issue", "https://github.com/Tisobyn/OnayGit/issues"),
+            for (title, desc, button) in [
+                ("Guided tips", "Rediscover shortcuts and workspace features.", "Show again"),
+                ("First-run setup", "", "Run setup again"),
             ] {
                 group_row(ui, p, |ui| {
-                    ui.hyperlink_to(label, url);
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(title).size(13.5).color(p.text));
+                            if !desc.is_empty() {
+                                ui.label(RichText::new(desc).size(12.0).color(p.muted));
+                            }
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button(button).clicked() {
+                                if title == "Guided tips" {
+                                    self.settings.tips = true;
+                                } else {
+                                    self.settings.onboarded = false;
+                                }
+                            }
+                        });
+                    });
                 });
             }
-            group_row(ui, p, |ui| {
-                ui.label(RichText::new(format!("Repository list: {}", repos_path().display())).size(12.0).color(p.muted));
-                ui.label(RichText::new(format!("Settings file: {}", settings_path().display())).size(12.0).color(p.muted));
-            });
         });
+        settings_group(ui, p, "Support", "", |_| {}, |ui| {
+            for (title, desc, button, link) in [
+                ("Create an issue", "Report a bug or request a feature on GitHub.", "Create an issue", "https://github.com/Tisobyn/OnayGit/issues/new"),
+                ("Existing issues", "Check reported problems and planned improvements.", "Browse issues", "https://github.com/Tisobyn/OnayGit/issues"),
+                ("Project on GitHub", "Read about OnayGit, explore the source, or contribute.", "Open GitHub", "https://github.com/Tisobyn/OnayGit"),
+            ] {
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(title).size(13.5).color(p.text));
+                            ui.label(RichText::new(desc).size(12.0).color(p.muted));
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button(button).clicked() {
+                                url = Some(link);
+                            }
+                        });
+                    });
+                });
+            }
+        });
+        if let Some(u) = url {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(u));
+        }
     }
+
 }
 
 fn privacy_page(ui: &mut egui::Ui, p: &Pal) {
-    page_header(ui, p, "Privacy", "What OnayGit does with your data.", |_| {});
-    settings_group(ui, p, "Data", "", |_| {}, |ui| {
-        for t in [
-            "OnayGit sends nothing to any server of its own. There is no telemetry.",
-            "Git commands run on this Mac, or on your machines over SSH.",
-            "Account tokens and API keys are stored in the macOS Keychain.",
-            "Network calls happen only when you use GitHub, GitLab or an AI provider.",
-        ] {
+    page_header(ui, p, "Privacy", "", |_| {});
+    settings_group(ui, p, "Usage statistics", "", |_| {}, |ui| {
+        group_row(ui, p, |ui| {
+            ui.label(RichText::new("No usage statistics").size(13.5).color(p.text));
+            ui.label(RichText::new("OnayGit has no telemetry. It sends nothing to servers of its own.").size(12.0).color(p.muted));
+        });
+    });
+    settings_group(ui, p, "What's sent", "", |_| {}, |ui| {
+        group_row(ui, p, |ui| {
+            ui.label(RichText::new("Sent").size(12.0).color(p.muted));
+        });
+        group_row(ui, p, |ui| {
+            ui.label(RichText::new("Nothing").size(13.5).color(p.text));
+        });
+        group_row(ui, p, |ui| {
+            ui.label(RichText::new("Never sent").size(12.0).color(p.muted));
+        });
+        for t in ["Repository names", "Paths", "Code", "Commit messages", "Account details"] {
             group_row(ui, p, |ui| {
-                ui.label(RichText::new(t).color(p.text));
+                ui.horizontal(|ui| {
+                    icon(ui, "shield", 14.0, p.muted);
+                    ui.label(RichText::new(t).size(13.5).color(p.text));
+                });
             });
         }
     });
+    ui.label(
+        RichText::new("Git commands run on this Mac, or on your machines over SSH. Tokens and API keys stay in the macOS Keychain. Network calls happen only when you use GitHub, GitLab or an AI provider.")
+            .size(12.5)
+            .color(p.muted),
+    );
 }
 
 /// Link or remove the `onaygit` command. The system folder asks macOS for admin approval.

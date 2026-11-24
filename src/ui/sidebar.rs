@@ -330,6 +330,9 @@ impl App {
         }
         if do_commit {
             if let Some(repo) = self.repo() {
+                if self.settings.auto_include {
+                    let _ = git::run(&repo, &["add", "-A"]);
+                }
                 let r = if self.amend {
                     git::amend(&repo, self.summary.trim(), &self.desc)
                 } else {

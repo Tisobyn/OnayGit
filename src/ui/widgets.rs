@@ -255,3 +255,35 @@ pub fn choice_tile(ui: &mut egui::Ui, p: &Pal, icon_name: &str, text: &str, sele
     ui.painter().text(rect.center() + egui::vec2(0.0, 15.0), Align2::CENTER_CENTER, text, FontId::proportional(12.5), p.text);
     resp
 }
+
+/// Row of a choice list inside a `settings_group`: icon tile, label and a check when selected.
+pub fn list_row(ui: &mut egui::Ui, p: &Pal, icon_name: &str, text: &str, selected: bool, tile: bool) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 44.0), Sense::click());
+    let pt = ui.painter().clone();
+    if selected {
+        pt.rect_filled(rect, 0.0, tint(p));
+    } else if resp.hovered() {
+        pt.rect_filled(rect, 0.0, p.hover);
+    }
+    pt.hline(rect.x_range(), rect.top(), egui::Stroke::new(1.0_f32, p.border));
+    let mid = rect.center().y;
+    if tile {
+        let t = egui::Rect::from_center_size(egui::pos2(rect.min.x + 32.0, mid), egui::vec2(30.0, 30.0));
+        pt.rect_filled(t, 6.0, p.hover);
+        paint_icon(ui, icon_name, t.shrink(7.0), p.muted);
+    } else {
+        paint_icon(ui, icon_name, egui::Rect::from_center_size(egui::pos2(rect.min.x + 32.0, mid), egui::vec2(14.0, 14.0)), p.muted);
+    }
+    pt.text(egui::pos2(rect.min.x + 62.0, mid), Align2::LEFT_CENTER, text, FontId::proportional(13.5), p.text);
+    if selected {
+        paint_icon(ui, "check", egui::Rect::from_center_size(egui::pos2(rect.max.x - 22.0, mid), egui::vec2(14.0, 14.0)), p.muted);
+    }
+    resp
+}
+
+/// Keyboard shortcut chip.
+pub fn key_chip(ui: &mut egui::Ui, p: &Pal, text: &str) {
+    egui::Frame::none().fill(p.hover).rounding(5.0).inner_margin(egui::Margin::symmetric(10.0, 4.0)).show(ui, |ui| {
+        ui.label(RichText::new(text).size(12.5).color(p.text));
+    });
+}

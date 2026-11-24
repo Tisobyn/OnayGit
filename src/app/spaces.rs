@@ -50,6 +50,17 @@ impl App {
         self.save_spaces();
     }
 
+    pub fn rename_space(&mut self, i: usize, name: &str) {
+        let name = name.trim();
+        if name.is_empty() || self.spaces.iter().enumerate().any(|(k, s)| k != i && s.name == name) {
+            return;
+        }
+        if let Some(s) = self.spaces.get_mut(i) {
+            s.name = name.to_string();
+            self.save_spaces();
+        }
+    }
+
     pub fn remove_space(&mut self, i: usize) {
         if i < self.spaces.len() {
             self.spaces.remove(i);
