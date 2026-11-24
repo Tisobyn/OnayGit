@@ -88,7 +88,7 @@ pub fn commit_files(repo: &Path, hash: &str) -> Vec<(char, String)> {
 
 /// Diff of one file in one commit.
 pub fn show_file(repo: &Path, hash: &str, path: &str) -> String {
-    run(repo, &["show", "--format=", hash, "--", path]).unwrap_or_default()
+    run(repo, &["show", super::diff::context_arg(), "--format=", hash, "--", path]).unwrap_or_default()
 }
 
 pub fn cherry_pick(repo: &Path, hash: &str) -> Result<String, String> {

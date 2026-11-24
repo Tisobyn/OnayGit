@@ -27,6 +27,21 @@ pub fn hunk_start(s: &str) -> u32 {
         .unwrap_or(1)
 }
 
+static FULL_CONTEXT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Show whole files in diffs instead of three lines around each change.
+pub fn set_full_context(on: bool) {
+    FULL_CONTEXT.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn full_context() -> bool {
+    FULL_CONTEXT.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+pub(super) fn context_arg() -> &'static str {
+    if full_context() { "-U100000" } else { "-U3" }
+}
+
 /// Turn unified diff text into numbered lines. `show_files` keeps file headers.
 pub fn parse_diff(text: &str, show_files: bool) -> Vec<DiffLine> {
     let mut out = Vec::new();

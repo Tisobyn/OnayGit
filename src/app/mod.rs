@@ -128,6 +128,8 @@ pub struct App {
     pub diff: Vec<DiffLine>,
     pub summary: String,
     pub filter_open: bool,
+    pub focus_filter: bool,
+    pub commit_now: bool,
     /// Author, date and message body of the selected commit.
     pub commit_info: Option<(String, String, String)>,
     pub branch: String,
@@ -310,6 +312,8 @@ impl App {
             diff: vec![],
             summary: String::new(),
             filter_open: false,
+            focus_filter: false,
+            commit_now: false,
             commit_info: None,
             branch: String::new(),
             branches: vec![],

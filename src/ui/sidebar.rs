@@ -158,8 +158,9 @@ impl App {
                             ui.horizontal(|ui| {
                                 ui.add_space(10.0);
                                 let r = ui.add(egui::TextEdit::singleline(&mut self.filter).hint_text("Filter").desired_width(ui.available_width() - 10.0));
-                                if self.filter.is_empty() && !r.has_focus() && r.gained_focus() {
+                                if self.focus_filter {
                                     r.request_focus();
+                                    self.focus_filter = false;
                                 }
                             });
                             ui.add_space(4.0);
@@ -336,6 +337,9 @@ impl App {
         }
         for a in actions {
             self.apply(a);
+        }
+        if std::mem::take(&mut self.commit_now) && !self.summary.trim().is_empty() && self.files.iter().any(|f| f.staged()) && !self.amend {
+            do_commit = true;
         }
         if do_commit {
             if let Some(repo) = self.repo() {

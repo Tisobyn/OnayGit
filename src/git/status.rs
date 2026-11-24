@@ -61,12 +61,12 @@ pub fn status(repo: &Path) -> Vec<FileChange> {
 /// Diff of one file. `staged` shows index vs HEAD, otherwise worktree vs index.
 pub fn file_diff(repo: &Path, f: &FileChange, staged: bool) -> String {
     if staged {
-        return run(repo, &["diff", "--cached", "--", &f.path]).unwrap_or_default();
+        return run(repo, &["diff", super::diff::context_arg(), "--cached", "--", &f.path]).unwrap_or_default();
     }
     if f.work == '?' {
         return run_any(repo, &["diff", "--no-index", "--", "/dev/null", &f.path]);
     }
-    run(repo, &["diff", "--", &f.path]).unwrap_or_default()
+    run(repo, &["diff", super::diff::context_arg(), "--", &f.path]).unwrap_or_default()
 }
 
 pub fn stage(repo: &Path, path: &str) -> Result<(), String> {

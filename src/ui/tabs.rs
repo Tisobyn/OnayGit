@@ -23,6 +23,9 @@ impl App {
         if prefs {
             self.open_settings();
         }
+        if new_tab {
+            self.screen = Screen::Home;
+        }
         if h("open") {
             if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
                 self.open_repo(d);
@@ -74,6 +77,17 @@ impl App {
         if self.screen == Screen::Repo {
             if h("find") {
                 self.filter_open = true;
+                self.focus_filter = true;
+            }
+            if h("commit") && self.tab == Tab::Changes {
+                self.commit_now = true;
+            }
+            if h("expand-diff") && !ctx.wants_keyboard_input() {
+                git::set_full_context(!git::full_context());
+                self.refresh();
+                if let Some(c) = self.selected_commit.clone() {
+                    self.select_commit(c);
+                }
             }
         }
         if close && self.screen == Screen::Repo {
