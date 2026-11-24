@@ -184,6 +184,7 @@ pub struct App {
     pub git_editing: bool,
     pub ai_adding: bool,
     pub switcher_text: String,
+    pub switcher_sel: usize,
     pub img_before: Option<PathBuf>,
     pub collapsed: HashSet<String>,
     pub accounts: Vec<git::Account>,
@@ -324,6 +325,7 @@ impl App {
             git_editing: false,
             ai_adding: false,
             switcher_text: String::new(),
+            switcher_sel: 0,
             img_before: None,
             collapsed: HashSet::new(),
             accounts: accounts::load_accounts(),
@@ -416,6 +418,7 @@ impl App {
                         app.dialog = Some(Dialog::Reword);
                     }
                     "welcome" => app.settings.onboarded = false,
+                    "switcher" => app.dialog = Some(Dialog::Switcher),
                     _ => {}
                 }
             }

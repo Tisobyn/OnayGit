@@ -18,6 +18,7 @@ impl App {
         });
         if quick {
             self.switcher_text.clear();
+            self.switcher_sel = 0;
             self.dialog = Some(Dialog::Switcher);
         }
         if prefs {
