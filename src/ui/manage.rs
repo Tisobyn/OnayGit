@@ -48,7 +48,7 @@ impl App {
         let close = modal(ctx, &p, "tags", 540.0, Place::Center, "Tags", "", |ui| {
             dialog_field(ui, &p, "New tag", &mut self.new_tag, "Tag name, for example v1.0");
             ui.add_space(4.0);
-            ui.add(egui::TextEdit::singleline(&mut self.new_tag_msg).hint_text("Message (optional, makes an annotated tag)").desired_width(f32::INFINITY).margin(egui::vec2(12.0, 10.0)));
+            framed(ui, &p, egui::TextEdit::singleline(&mut self.new_tag_msg).hint_text("Message (optional, makes an annotated tag)").desired_width(f32::INFINITY).margin(egui::vec2(12.0, 10.0)));
             ui.add_space(6.0);
             ui.horizontal(|ui| {
                 let target = if self.tag_target.is_empty() { "HEAD".to_string() } else { self.tag_target.chars().take(7).collect() };
@@ -111,6 +111,7 @@ impl App {
                 }
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
+                        ui.set_max_width(ui.available_width() - 120.0);
                         let name = if w.branch.is_empty() { format!("(detached {})", w.head) } else { w.branch.clone() };
                         let tag = if w.main { "  main worktree" } else { "" };
                         ui.label(RichText::new(format!("{name}{tag}")).size(13.5).color(p.text));
@@ -128,7 +129,7 @@ impl App {
                 });
             }
             dialog_section(ui, &p, "Add worktree");
-            ui.add(egui::TextEdit::singleline(&mut self.wt_name).hint_text("Branch name").desired_width(f32::INFINITY).margin(egui::vec2(12.0, 10.0)));
+            framed(ui, &p, egui::TextEdit::singleline(&mut self.wt_name).hint_text("Branch name").desired_width(f32::INFINITY).margin(egui::vec2(12.0, 10.0)));
             ui.add_space(4.0);
             ui.checkbox(&mut self.wt_new_branch, "Create new branch");
             button_row(ui, |ui| {

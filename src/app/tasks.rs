@@ -162,7 +162,10 @@ impl App {
         if let Err(e) = res {
             let quiet = label == T_PRS || label == T_SIGN_IN || label == T_DEVICE || label.starts_with(T_CHECK) || label.starts_with(crate::ui::clone::T_REPOS);
             if !quiet {
-                self.status_msg = format!("{label} failed: {e}");
+                self.status_msg = match label.strip_prefix(T_TEST) {
+                    Some(host) => format!("Could not connect to {host}: {e}"),
+                    None => format!("{label} failed: {e}"),
+                };
             }
             if label.starts_with(T_TEST) {
                 self.pending_machine = None;

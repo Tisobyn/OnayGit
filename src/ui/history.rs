@@ -63,7 +63,7 @@ impl App {
         if self.filter_open {
             ui.horizontal(|ui| {
                 ui.add_space(10.0);
-                let r = ui.add(egui::TextEdit::singleline(&mut self.filter).hint_text("Filter commits").desired_width(ui.available_width() - 10.0));
+                let r = framed(ui, &p, egui::TextEdit::singleline(&mut self.filter).hint_text("Filter commits").desired_width(ui.available_width() - 10.0));
                 if self.focus_filter {
                     r.request_focus();
                     self.focus_filter = false;

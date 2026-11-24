@@ -210,6 +210,7 @@ pub fn apply_visuals(ctx: &egui::Context, theme: Theme) {
     ctx.set_visuals(v);
 
     ctx.style_mut(|s| {
+        s.interaction.selectable_labels = false;
         use egui::{FontFamily, FontId, TextStyle};
         s.text_styles = [
             (TextStyle::Heading, FontId::new(17.0, FontFamily::Proportional)),

@@ -47,12 +47,28 @@ pub fn rail_item(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &
 
 /// Rail item with a chosen row height.
 pub fn rail_item_h(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &Pal, h: f32) -> egui::Response {
+    rail_item_tint(ui, icon, text, selected, p, h, p.muted)
+}
+
+/// Text field with a visible border, so it reads as an input.
+pub fn framed(ui: &mut egui::Ui, p: &Pal, edit: egui::TextEdit) -> egui::Response {
+    ui.scope(|ui| {
+        let v = &mut ui.visuals_mut().widgets;
+        v.inactive.bg_stroke = egui::Stroke::new(1.0_f32, p.border);
+        v.hovered.bg_stroke = egui::Stroke::new(1.0_f32, p.muted.gamma_multiply(0.6));
+        ui.add(edit.margin(egui::vec2(10.0, 7.0)))
+    })
+    .inner
+}
+
+/// Rail item with a tinted icon (spaces use their own colour).
+pub fn rail_item_tint(ui: &mut egui::Ui, icon: &str, text: &str, selected: bool, p: &Pal, h: f32, tint: Color32) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), h), Sense::click());
     if selected || resp.hovered() {
         ui.painter().rect_filled(rect, 6.0, p.hover);
     }
     let icon_rect = egui::Rect::from_center_size(rect.min + egui::vec2(16.0, h / 2.0), egui::vec2(15.0, 15.0));
-    paint_icon(ui, icon, icon_rect, p.muted);
+    paint_icon(ui, icon, icon_rect, tint);
     ui.painter().text(
         rect.min + egui::vec2(36.0, h / 2.0),
         Align2::LEFT_CENTER,

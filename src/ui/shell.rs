@@ -201,7 +201,7 @@ impl App {
                     if icon_button(ui, "history", "History", self.tab == Tab::History, p).clicked() {
                         new_tab = Some(Tab::History);
                     }
-                    if icon_button(ui, "stop", "Ignored changes", self.tab == Tab::Ignored, p).clicked() {
+                    if icon_button(ui, "ignored", "Ignored changes", self.tab == Tab::Ignored, p).clicked() {
                         new_tab = Some(Tab::Ignored);
                     }
                     ui.add_space(2.0);
@@ -439,7 +439,21 @@ impl App {
                             if *checked {
                                 paint_icon(ui, "check", egui::Rect::from_center_size(rect.left_center() + egui::vec2(14.0, 0.0), egui::vec2(14.0, 14.0)), col);
                             }
-                            ui.painter().text(rect.left_center() + egui::vec2(28.0, 0.0), Align2::LEFT_CENTER, label, FontId::proportional(13.5), col);
+                            let mut tx = 28.0;
+                            if kind == 1 {
+                                let sp = self.spaces.iter().find(|s| s.name == *label);
+                                let ico = match (sp, label.as_str()) {
+                                    (Some(s), _) => Some((space_icon_name(&s.icon), if s.color.is_some() { space_color32(s.color) } else { p.muted })),
+                                    (None, "All repositories") => Some(("layers".to_string(), p.muted)),
+                                    (None, "New space...") => Some(("add".to_string(), p.muted)),
+                                    _ => None,
+                                };
+                                if let Some((n, c)) = ico {
+                                    paint_icon(ui, &n, egui::Rect::from_center_size(rect.left_center() + egui::vec2(38.0, 0.0), egui::vec2(14.0, 14.0)), c);
+                                }
+                                tx = 54.0;
+                            }
+                            ui.painter().text(rect.left_center() + egui::vec2(tx, 0.0), Align2::LEFT_CENTER, label, FontId::proportional(13.5), col);
                             if *enabled && resp.clicked() {
                                 chosen = Some(i);
                             }

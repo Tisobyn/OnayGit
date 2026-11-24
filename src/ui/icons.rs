@@ -70,6 +70,7 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "search" => Some(include_bytes!("../../assets/icons/search.svg")),
         "shield" => Some(include_bytes!("../../assets/icons/shield.svg")),
         "sparkle" => Some(include_bytes!("../../assets/icons/sparkle.svg")),
+        "ignored" => Some(include_bytes!("../../assets/icons/ignored.svg")),
         "stop" => Some(include_bytes!("../../assets/icons/stop.svg")),
         "swap" => Some(include_bytes!("../../assets/icons/swap.svg")),
         "sync" => Some(include_bytes!("../../assets/icons/sync.svg")),

@@ -84,8 +84,8 @@ pub fn folder_field(ui: &mut egui::Ui, p: &Pal, label: &str, value: Option<&Path
 /// Primary action button in 1git's blue.
 pub fn primary_button(ui: &mut egui::Ui, text: &str, enabled: bool) -> egui::Response {
     let blue = Color32::from_rgb(128, 167, 255);
-    let (fill, fg) = if enabled { (Color32::from_rgb(48, 62, 83), blue) } else { (Color32::from_rgb(43, 53, 66), blue.gamma_multiply(0.55)) };
-    ui.add_enabled(enabled, egui::Button::new(RichText::new(text).color(fg)).fill(fill).min_size(egui::vec2(0.0, 30.0)))
+    let (fill, fg) = if enabled { (Color32::from_rgb(48, 62, 83), blue) } else { (Color32::from_rgb(43, 53, 66), blue.gamma_multiply(0.7)) };
+    ui.add(egui::Button::new(RichText::new(text).color(fg)).fill(fill).min_size(egui::vec2(0.0, 30.0)).sense(if enabled { Sense::click() } else { Sense::hover() }))
 }
 
 /// Secondary button (Cancel).

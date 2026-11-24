@@ -63,7 +63,9 @@ impl App {
                                     "sync" => do_refresh = true,
                                     "search" => {
                                         self.filter_open = !self.filter_open;
-                                        if !self.filter_open {
+                                        if self.filter_open {
+                                            self.focus_filter = true;
+                                        } else {
                                             self.filter.clear();
                                         }
                                     }

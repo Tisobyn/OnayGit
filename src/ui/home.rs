@@ -1,5 +1,7 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
+use crate::app::spaces::space_icon_name;
+use crate::ui::settings_page::space_color32;
 
 impl App {
     pub fn home(&mut self, ctx: &egui::Context) {
@@ -45,7 +47,8 @@ impl App {
                 }
                 for i in 0..self.spaces.len() {
                     let name = self.spaces[i].name.clone();
-                    let r = rail_item(ui, "folder", &name, self.selected_space == Some(i) && self.selected_machine.is_none(), &p);
+                    let (sicon, scol) = (space_icon_name(&self.spaces[i].icon), if self.spaces[i].color.is_some() { space_color32(self.spaces[i].color) } else { p.muted });
+                    let r = rail_item_tint(ui, &sicon, &name, self.selected_space == Some(i) && self.selected_machine.is_none(), &p, 29.0, scol);
                     if r.clicked() {
                         self.set_space(Some(i));
                         self.selected_machine = None;
@@ -59,7 +62,7 @@ impl App {
                 }
                 ui.horizontal(|ui| {
                     let w = ui.available_width() - 70.0;
-                    let r = ui.add(egui::TextEdit::singleline(&mut self.space_name).hint_text("New space").desired_width(w));
+                    let r = framed(ui, &p, egui::TextEdit::singleline(&mut self.space_name).hint_text("New space").desired_width(w));
                     let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                     if ui.small_button("Add").clicked() || enter {
                         new_space = true;
@@ -153,6 +156,15 @@ impl App {
                     return;
                 }
 
+                if shown.is_empty() && q.is_empty() {
+                    ui.add_space(30.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(RichText::new("This space is empty").size(16.0).color(p.muted));
+                        ui.label(RichText::new("Right-click a repository and choose Spaces to add it here.").color(p.muted));
+                    });
+                    return;
+                }
+
                 {
                     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                         if self.grid {
@@ -183,7 +195,7 @@ impl App {
                             });
                         } else {
                             for &i in &shown {
-                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]), self.repo_styles.contains_key(&self.repos[i]), self.repo_info.get(&self.repos[i]));
+                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]), self.repo_styles.contains_key(&self.repos[i]), self.repo_info.get(&self.repos[i])).on_hover_text(self.repos[i].display().to_string());
                                 if r.clicked() {
                                     open = Some(self.repos[i].clone());
                                 }
