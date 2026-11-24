@@ -128,7 +128,7 @@ impl App {
                 (true, "All users", "Install in /usr/local/bin. macOS may ask for administrator approval.", &sys_bin),
                 (false, "Only me", "Install in ~/.local/bin without administrator access.", &user_bin),
             ] {
-                let installed = bin.exists();
+                let installed = bin.symlink_metadata().is_ok();
                 group_row(ui, p, |ui| {
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
@@ -1472,4 +1472,20 @@ fn identity_tile(ui: &mut egui::Ui, p: &Pal, icon_name: &str, title: &str, detai
     ui.painter().text(rect.center() + egui::vec2(0.0, 6.0), Align2::CENTER_CENTER, title, FontId::proportional(13.5), p.text);
     ui.painter().text(rect.center() + egui::vec2(0.0, 28.0), Align2::CENTER_CENTER, detail, FontId::proportional(12.0), p.muted);
     resp
+}
+
+#[cfg(test)]
+mod launcher_tests {
+    use super::*;
+
+    #[test]
+    fn per_user_launcher_installs_and_removes() {
+        let dir = std::env::temp_dir().join(format!("onaygit-launcher-{}", std::process::id()));
+        let bin = dir.join("bin/onaygit");
+        assert!(toggle_launcher(&bin, false, false).unwrap().starts_with("Installed"));
+        assert!(bin.symlink_metadata().is_ok());
+        assert_eq!(toggle_launcher(&bin, true, false).unwrap(), "Removed");
+        assert!(bin.symlink_metadata().is_err());
+        let _ = std::fs::remove_dir_all(dir);
+    }
 }

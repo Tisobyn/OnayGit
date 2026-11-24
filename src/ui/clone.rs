@@ -42,7 +42,12 @@ impl App {
         if url.is_empty() {
             return None;
         }
-        let path = self.clone_dir.clone().unwrap_or_else(|| home_dir().join(folder_name(&url)));
+        // An empty chosen folder is the target itself. A folder with files gets a sub folder named after the repository.
+        let path = match self.clone_dir.clone() {
+            Some(d) if d.is_dir() && std::fs::read_dir(&d).is_ok_and(|mut r| r.next().is_some()) => d.join(folder_name(&url)),
+            Some(d) => d,
+            None => home_dir().join(folder_name(&url)),
+        };
         Some((url, path))
     }
 
