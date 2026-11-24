@@ -1,7 +1,9 @@
 //! Common imports shared by every module.
 #![allow(unused_imports)]
 
+pub use crate::app::machines::Machine;
 pub use crate::app::tabs::{RepoStyle, REPO_ICONS};
+pub use crate::app::tasks::*;
 pub use crate::app::history::{CommitAction, ConflictAct};
 pub use crate::app::refs::StashOp;
 pub use crate::app::*;

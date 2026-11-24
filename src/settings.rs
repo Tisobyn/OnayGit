@@ -1,4 +1,5 @@
 #[allow(unused_imports)]
+use crate::git::{AiConfig, AiProvider};
 use crate::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -11,6 +12,7 @@ pub struct Settings {
     pub zoom: f32,
     pub refresh_secs: u64,
     pub editor: String,
+    pub ai: AiConfig,
 }
 
 impl Default for Settings {
@@ -24,6 +26,7 @@ impl Default for Settings {
             zoom: 1.0,
             refresh_secs: 3,
             editor: "code".into(),
+            ai: AiConfig::default(),
         }
     }
 }
@@ -55,6 +58,10 @@ impl Settings {
                 "zoom" => s.zoom = v.parse().unwrap_or(1.0),
                 "refresh_secs" => s.refresh_secs = v.parse().unwrap_or(3),
                 "editor" => s.editor = v.to_string(),
+                "ai_provider" => s.ai.provider = AiProvider::from_key(v).unwrap_or(AiProvider::ClaudeCode),
+                "ai_command" => s.ai.command = v.to_string(),
+                "ai_model" => s.ai.model = v.to_string(),
+                "ai_base_url" => s.ai.base_url = v.to_string(),
                 _ => {}
             }
         }
@@ -63,12 +70,17 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\n",
+            "theme={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\n",
             self.theme.key(),
             self.accent,
             self.tips,
             self.onboarded,
-            self.diff_font, self.zoom, self.refresh_secs, self.editor
+            self.diff_font, self.zoom, self.refresh_secs,
+            self.editor,
+            self.ai.provider.key(),
+            self.ai.command.replace('\n', " "),
+            self.ai.model,
+            self.ai.base_url
         );
         let _ = std::fs::write(settings_path(), text);
     }
@@ -82,6 +94,6 @@ pub fn load_repos() -> Vec<PathBuf> {
         .lines()
         .filter(|l| !l.trim().is_empty())
         .map(PathBuf::from)
-        .filter(|p| p.exists())
+        .filter(|p| p.exists() || git::is_remote(p))
         .collect()
 }

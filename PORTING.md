@@ -33,8 +33,8 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 19. Guided tips and onboarding
 
 ## Hosting and AI
-- [ ] 20. GitHub and GitLab accounts
-- [ ] 21. Publish repository
-- [ ] 22. Pull / merge requests
-- [ ] 23. AI commit messages (Claude Code, Codex, any API)
-- [ ] 24. SSH remote repositories (machines)
+- [x] 20. GitHub and GitLab accounts
+- [x] 21. Publish repository
+- [x] 22. Pull / merge requests
+- [x] 23. AI commit messages (Claude Code, Codex, any API)
+- [x] 24. SSH remote repositories (machines)

@@ -17,9 +17,20 @@ impl App {
             .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(14.0, 22.0)))
             .show(ctx, |ui| {
                 rail_label(ui, "MACHINES", &p);
-                rail_item(ui, "home", "This Mac", true, &p);
+                if rail_item(ui, "home", "This Mac", self.selected_machine.is_none(), &p).clicked() {
+                    self.selected_machine = None;
+                }
+                for i in 0..self.machines.len() {
+                    let name = self.machines[i].name.clone();
+                    if rail_item(ui, "network", &name, self.selected_machine == Some(i), &p).clicked() {
+                        self.selected_machine = Some(i);
+                    }
+                }
                 ui.add_space(6.0);
-                rail_item(ui, "add", "Add machine...", false, &p);
+                if rail_item(ui, "add", "Add machine...", false, &p).clicked() {
+                    self.status_msg.clear();
+                    self.dialog = Some(Dialog::AddMachine);
+                }
                 ui.add_space(22.0);
                 rail_label(ui, "QUICK ACTIONS", &p);
                 if rail_item(ui, "add", "Create repository", false, &p).clicked() {
@@ -46,6 +57,10 @@ impl App {
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(30.0, 22.0)))
             .show(ctx, |ui| {
+                if let Some(mi) = self.selected_machine {
+                    self.machine_view(ctx, ui, mi, &p, &mut open);
+                    return;
+                }
                 ui.horizontal(|ui| {
                     let w = ui.available_width() - 130.0;
                     ui.add(
@@ -67,6 +82,7 @@ impl App {
 
                 let q = self.search.to_lowercase();
                 let shown: Vec<usize> = (0..self.repos.len())
+                    .filter(|&i| !git::is_remote(&self.repos[i]))
                     .filter(|&i| q.is_empty() || repo_name(&self.repos[i]).to_lowercase().contains(&q))
                     .collect();
 

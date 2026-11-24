@@ -29,7 +29,7 @@ pub fn load_tabs() -> Vec<PathBuf> {
         .lines()
         .filter(|l| !l.trim().is_empty())
         .map(PathBuf::from)
-        .filter(|p| p.exists())
+        .filter(|p| p.exists() || git::is_remote(p))
         .collect()
 }
 

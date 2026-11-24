@@ -141,7 +141,14 @@ impl App {
         if open_editor || reveal {
             if let (Some(repo), Some(file)) = (self.repo(), self.selected_file.clone()) {
                 let path = repo.join(file);
-                if reveal {
+                if git::is_remote(&repo) {
+                    if reveal {
+                        self.status_msg = "Show in Finder is not available on other machines".into();
+                    } else if let Some((host, rp)) = git::split_remote(&path) {
+                        let cmd = format!("{} --remote ssh-remote+{} {}", self.settings.editor, host, git::quote(&rp));
+                        let _ = std::process::Command::new("sh").arg("-c").arg(cmd).spawn();
+                    }
+                } else if reveal {
                     git::reveal(&path);
                 } else if let Err(e) = git::open_editor(&self.settings.editor, &path) {
                     self.status_msg = e;

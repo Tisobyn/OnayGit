@@ -1,9 +1,14 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
 
+pub mod accounts;
+pub mod ai;
 pub mod history;
+pub mod hosting;
+pub mod machines;
 pub mod refs;
 pub mod tabs;
+pub mod tasks;
 mod repos;
 mod staging;
 
@@ -26,6 +31,8 @@ pub enum Section {
     Appearance,
     Git,
     Editor,
+    Accounts,
+    Ai,
     Remotes,
     RepoStyle,
     Ignore,
@@ -55,6 +62,9 @@ pub enum Dialog {
     Tags,
     Worktrees,
     Reword,
+    Publish,
+    PullRequests,
+    AddMachine,
 }
 
 pub type Done = (String, Result<String, String>);
@@ -130,6 +140,30 @@ pub struct App {
     pub tabs: Vec<PathBuf>,
     pub repo_styles: HashMap<PathBuf, RepoStyle>,
     pub tip: usize,
+    pub tasks: HashSet<String>,
+    pub accounts: Vec<git::Account>,
+    pub acct_provider: git::Provider,
+    pub acct_host: String,
+    pub acct_token: String,
+    pub pending_account: Option<(git::Provider, String, String)>,
+    pub publish_account: usize,
+    pub publish_name: String,
+    pub publish_private: bool,
+    pub publish_desc: String,
+    pub prs: Vec<git::PullRequest>,
+    pub pr_error: String,
+    pub pr_title: String,
+    pub pr_body: String,
+    pub pr_base: String,
+    pub ai_key_set: bool,
+    pub ai_key_input: String,
+    pub machines: Vec<Machine>,
+    pub selected_machine: Option<usize>,
+    pub machine_repos: HashMap<String, Vec<String>>,
+    pub machine_name: String,
+    pub machine_host: String,
+    pub machine_path: String,
+    pub pending_machine: Option<Machine>,
     pub amend: bool,
     pub confirm: Option<Confirm>,
     pub last_commit: Option<(String, String)>,
@@ -218,6 +252,30 @@ impl App {
             tabs: vec![],
             repo_styles: tabs::load_styles(),
             tip: 0,
+            tasks: HashSet::new(),
+            accounts: accounts::load_accounts(),
+            acct_provider: git::Provider::GitHub,
+            acct_host: String::new(),
+            acct_token: String::new(),
+            pending_account: None,
+            publish_account: 0,
+            publish_name: String::new(),
+            publish_private: true,
+            publish_desc: String::new(),
+            prs: vec![],
+            pr_error: String::new(),
+            pr_title: String::new(),
+            pr_body: String::new(),
+            pr_base: String::new(),
+            ai_key_set: false,
+            ai_key_input: String::new(),
+            machines: machines::load_machines(),
+            selected_machine: None,
+            machine_repos: HashMap::new(),
+            machine_name: String::new(),
+            machine_host: String::new(),
+            machine_path: String::new(),
+            pending_machine: None,
             amend: false,
             confirm: None,
             last_commit: None,
@@ -255,6 +313,9 @@ impl eframe::App for App {
         apply_visuals(ctx, self.settings.theme);
 
         while let Ok((label, res)) = self.rx.try_recv() {
+            if self.handle_task_result(&label, &res) {
+                continue;
+            }
             self.busy = None;
             match res {
                 Ok(_) => {
@@ -275,7 +336,10 @@ impl eframe::App for App {
             self.refresh();
         }
 
-        let every = Duration::from_secs(self.settings.refresh_secs.max(1));
+        let mut every = Duration::from_secs(self.settings.refresh_secs.max(1));
+        if self.repo().is_some_and(|r| git::is_remote(&r)) {
+            every = every.max(Duration::from_secs(20));
+        }
         if self.screen == Screen::Repo && self.last_refresh.elapsed() > every && self.busy.is_none() {
             self.refresh();
         }

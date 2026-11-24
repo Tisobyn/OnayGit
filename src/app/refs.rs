@@ -79,6 +79,10 @@ impl App {
         if branch.is_empty() {
             return;
         }
+        if git::is_remote(&repo) {
+            self.status_msg = "Adding worktrees is not available for repositories on other machines".into();
+            return;
+        }
         let Some(parent) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() else { return };
         let path = parent.join(branch.replace('/', "-"));
         let r = git::worktree_add(&repo, &path, &branch, self.wt_new_branch);

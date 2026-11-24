@@ -10,6 +10,8 @@ impl App {
         let mut switch_repo: Option<usize> = None;
         let mut switch_branch: Option<String> = None;
         let mut create_branch = false;
+        let mut open_prs = false;
+        let mut open_pub = false;
         let mut merge_branch: Option<String> = None;
         let mut ask: Option<Confirm> = None;
         let remote = self.remote_name.clone();
@@ -52,6 +54,10 @@ impl App {
                         }
                         if ui.button("Worktrees...").clicked() {
                             open_dialog = Some(Dialog::Worktrees);
+                            ui.close_menu();
+                        }
+                        if ui.button("Pull requests...").clicked() {
+                            open_prs = true;
                             ui.close_menu();
                         }
                         ui.separator();
@@ -126,7 +132,7 @@ impl App {
 
                     // Sync block (Fetch / Pull / Push / Publish like GitHub Desktop)
                     let (title, sub, args): (String, String, Option<(&str, Vec<&str>)>) = if !self.has_remote {
-                        ("No remote".to_string(), "Add a remote to sync".into(), None)
+                        ("Publish repository".to_string(), "Create it on GitHub or GitLab".into(), None)
                     } else {
                         match self.ahead_behind {
                             None => (
@@ -151,7 +157,8 @@ impl App {
                             ),
                         }
                     };
-                    let enabled = args.is_some() && self.busy.is_none();
+                    let no_remote = !self.has_remote;
+                    let enabled = (args.is_some() || no_remote) && self.busy.is_none();
                     let label = if let Some(b) = &self.busy {
                         two_line(&format!("{b}..."), "Please wait", &p)
                     } else {
@@ -168,7 +175,11 @@ impl App {
                     };
                     icon(ui, sync_icon, 18.0, p.muted);
                     if ui.add_enabled(enabled, egui::Button::new(label).frame(false)).clicked() {
-                        sync = args;
+                        if no_remote {
+                            open_pub = true;
+                        } else {
+                            sync = args;
+                        }
                     }
                     if self.busy.is_some() {
                         ui.spinner();
@@ -190,6 +201,12 @@ impl App {
 
         if open_dialog.is_some() {
             self.dialog = open_dialog;
+        }
+        if open_pub {
+            self.open_publish();
+        }
+        if open_prs {
+            self.open_pull_requests(ctx);
         }
         if goto_home {
             self.screen = Screen::Home;

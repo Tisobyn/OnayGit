@@ -159,13 +159,15 @@ impl App {
             return;
         }
         self.busy = Some(label.to_string());
+        let env = if self.repo().as_ref() == Some(&dir) { self.auth_env_for(&dir) } else { vec![] };
         let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
         let tx = self.tx.clone();
         let ctx = ctx.clone();
         let label = label.to_string();
         std::thread::spawn(move || {
             let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-            let res = git::run(&dir, &refs);
+            let env_refs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+            let res = git::run_env(&dir, &refs, &env_refs);
             let _ = tx.send((label, res));
             ctx.request_repaint();
         });

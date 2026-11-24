@@ -8,6 +8,9 @@ impl App {
             Some(Dialog::Tags) => self.tags_window(ctx),
             Some(Dialog::Worktrees) => self.worktrees_window(ctx),
             Some(Dialog::Reword) => self.reword_window(ctx),
+            Some(Dialog::Publish) => self.publish_window(ctx),
+            Some(Dialog::PullRequests) => self.pull_requests_window(ctx),
+            Some(Dialog::AddMachine) => self.machine_window(ctx),
             None => {}
         }
     }

@@ -5,6 +5,8 @@ impl App {
     pub fn open_settings(&mut self) {
         self.git_name = git::config_get("user.name");
         self.git_email = git::config_get("user.email");
+        self.ai_key_set = git::secret_get(git::AI_SECRET).is_some();
+        self.status_msg.clear();
         self.screen = Screen::Settings;
     }
 
@@ -25,6 +27,8 @@ impl App {
                     (Section::Application, "settings", "Application"),
                     (Section::Appearance, "contrast", "Appearance"),
                     (Section::Git, "branch", "Git"),
+                    (Section::Accounts, "userCircle", "Accounts"),
+                    (Section::Ai, "sparkle", "AI messages"),
                     (Section::Editor, "pencil", "External editor"),
                     (Section::Help, "help", "Help"),
                 ] {
@@ -164,6 +168,8 @@ impl App {
                             }
                         }
                     }
+                    Section::Accounts => self.accounts_page(ctx, ui, &p),
+                    Section::Ai => self.ai_page(ui, &p),
                     Section::Remotes => self.remotes_page(ui, &p),
                     Section::RepoStyle => self.repo_style_page(ui, &p),
                     Section::Help => {

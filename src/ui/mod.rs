@@ -1,3 +1,4 @@
+pub mod accounts_page;
 pub mod conflicts;
 pub mod dialogs;
 pub mod diff_view;
@@ -11,6 +12,7 @@ pub mod settings_page;
 pub mod settings_repo;
 pub mod sidebar;
 pub mod tabs;
+pub mod publish;
 pub mod stash;
 pub mod theme;
 pub mod tips;

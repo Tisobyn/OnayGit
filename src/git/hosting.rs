@@ -69,6 +69,35 @@ pub struct PullRequest {
     pub draft: bool,
 }
 
+impl PullRequest {
+    pub fn to_line(&self) -> String {
+        let c = |s: &str| s.replace(['\t', '\n'], " ");
+        format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            self.number,
+            c(&self.title),
+            c(&self.author),
+            c(&self.head),
+            c(&self.base),
+            c(&self.url),
+            self.draft
+        )
+    }
+
+    pub fn from_line(l: &str) -> Option<PullRequest> {
+        let mut p = l.split('\t');
+        Some(PullRequest {
+            number: p.next()?.parse().ok()?,
+            title: p.next()?.to_string(),
+            author: p.next()?.to_string(),
+            head: p.next()?.to_string(),
+            base: p.next()?.to_string(),
+            url: p.next()?.to_string(),
+            draft: p.next()? == "true",
+        })
+    }
+}
+
 fn api_base(provider: Provider, host: &str) -> String {
     match provider {
         Provider::GitHub if host == "github.com" => "https://api.github.com".to_string(),
@@ -261,6 +290,22 @@ mod tests {
         .unwrap();
         let l = parse_pull_requests(Provider::GitLab, &gl);
         assert_eq!((l[0].number, l[0].base.as_str(), l[0].url.as_str()), (3, "main", "https://gitlab.com/o/r/-/merge_requests/3"));
+    }
+
+    #[test]
+    fn pull_request_lines_roundtrip() {
+        let p = PullRequest {
+            number: 9,
+            title: "A\tb".into(),
+            author: "me".into(),
+            head: "h".into(),
+            base: "main".into(),
+            url: "https://x".into(),
+            draft: true,
+        };
+        let back = PullRequest::from_line(&p.to_line()).unwrap();
+        assert_eq!(back.title, "A b");
+        assert_eq!((back.number, back.draft), (9, true));
     }
 
     #[test]

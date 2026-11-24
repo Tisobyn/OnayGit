@@ -20,6 +20,11 @@ src/
     refs.rs          stash, tag and worktree actions
     history.rs       commit actions, rewrite, conflicts
     tabs.rs          tabs and per-repository color/icon
+    tasks.rs         background tasks (network, AI, ssh) and their results
+    accounts.rs      GitHub/GitLab accounts (tokens in the Keychain)
+    hosting.rs       publish repository, pull requests
+    ai.rs            AI commit messages
+    machines.rs      SSH machines
   git/               thin wrappers over the git command (no UI code)
     exec.rs          run git, with or without stdin
     status.rs        status, stage, unstage, discard, file diff
@@ -38,6 +43,11 @@ src/
     repo.rs          init, scan for repositories
     config.rs        git config
     external.rs      open in editor, show in Finder
+    ssh.rs           repositories on other machines (ssh://host/path)
+    http.rs          small HTTP client over curl
+    keychain.rs      secrets in the macOS Keychain
+    hosting.rs       GitHub/GitLab API (has tests)
+    ai.rs            AI providers for commit messages (has tests)
   ui/                drawing code, one file per screen area
     theme.rs         5 themes and accent colors
     widgets.rs       small reusable widgets
@@ -57,6 +67,8 @@ src/
     tabs.rs          tab bar and Cmd+T / Cmd+W
     settings_repo.rs Remotes and repository appearance pages
     tips.rs          welcome window and guided tips
+    accounts_page.rs Accounts and AI settings pages
+    publish.rs       Publish, Pull requests, Add machine, machine view
 assets/              app icon (from 1git)
 PORTING.md           list of 1git features and what is done
 ```

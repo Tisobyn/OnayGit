@@ -8,6 +8,7 @@ impl App {
         let mut do_commit = false;
         let mut do_undo = false;
         let mut do_stash = false;
+        let mut do_ai = false;
         let mut ignore: Option<String> = None;
         let mut ask: Option<Confirm> = None;
         let mut new_tab = self.tab;
@@ -61,11 +62,26 @@ impl App {
                         egui::TopBottomPanel::bottom("commit_box")
                             .frame(egui::Frame::none().fill(p.sidebar).inner_margin(egui::Margin::same(8.0)))
                             .show_inside(ui, |ui| {
-                                ui.add(
-                                    egui::TextEdit::singleline(&mut self.summary)
-                                        .hint_text("Summary (required)")
-                                        .desired_width(f32::INFINITY),
-                                );
+                                ui.horizontal(|ui| {
+                                    let w = ui.available_width() - 30.0;
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut self.summary)
+                                            .hint_text("Summary (required)")
+                                            .desired_width(w),
+                                    );
+                                    if self.task_running(T_AI) {
+                                        ui.spinner();
+                                    } else {
+                                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), Sense::click());
+                                        if resp.hovered() {
+                                            ui.painter().rect_filled(rect, 6.0, p.hover);
+                                        }
+                                        paint_icon(ui, "sparkle", rect.shrink(4.0), accent());
+                                        if resp.on_hover_text("Write message with AI").clicked() {
+                                            do_ai = true;
+                                        }
+                                    }
+                                });
                                 ui.add_space(4.0);
                                 ui.add(
                                     egui::TextEdit::multiline(&mut self.desc)
@@ -251,6 +267,9 @@ impl App {
             });
 
         self.tab = new_tab;
+        if do_ai {
+            self.generate_message(ctx);
+        }
         if do_stash {
             self.stash_changes();
         }
