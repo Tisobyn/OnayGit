@@ -300,3 +300,34 @@ pub fn paint_round_check(ui: &egui::Ui, p: &Pal, rect: egui::Rect, checked: bool
         ui.painter().circle_stroke(c.center(), 7.0, egui::Stroke::new(1.2_f32, col));
     }
 }
+
+/// Overlapping round profile pictures (up to 3) starting at `left_center`.
+/// Returns the width used. Missing pictures show the person's initial.
+pub fn paint_avatars(ui: &egui::Ui, p: &Pal, left_center: egui::Pos2, people: &[git::Person], avatars: &HashMap<String, Option<PathBuf>>, d: f32) -> f32 {
+    let shown = &people[..people.len().min(3)];
+    let step = d * 0.68;
+    for (i, person) in shown.iter().enumerate().rev() {
+        let c = left_center + egui::vec2(d / 2.0 + step * i as f32, 0.0);
+        let rect = egui::Rect::from_center_size(c, egui::vec2(d, d));
+        ui.painter().circle_filled(c, d / 2.0 + 1.5, p.bg);
+        match avatars.get(&person.email.trim().to_lowercase()) {
+            Some(Some(path)) => {
+                ui.painter().circle_filled(c, d / 2.0, p.hover);
+                egui::Image::new(format!("file://{}", path.display())).rounding(d / 2.0).paint_at(ui, rect);
+            }
+            _ => {
+                let h = person.name.bytes().fold(7u32, |a, b| a.wrapping_mul(31).wrapping_add(b as u32));
+                let col = Color32::from_rgb(60 + (h % 80) as u8, 60 + ((h >> 8) % 80) as u8, 80 + ((h >> 16) % 90) as u8);
+                ui.painter().circle_filled(c, d / 2.0, col);
+                let letter = person.name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_else(|| "?".into());
+                ui.painter().text(c, Align2::CENTER_CENTER, letter, FontId::proportional(d * 0.55), Color32::WHITE);
+            }
+        }
+    }
+    d + step * (shown.len().saturating_sub(1)) as f32
+}
+
+/// "Tisobyn, Claude Sonnet 5.5"
+pub fn people_names(people: &[git::Person]) -> String {
+    people.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", ")
+}

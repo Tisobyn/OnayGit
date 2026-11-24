@@ -58,16 +58,25 @@ impl App {
                 if let Some(h) = self.selected_commit.as_deref() {
                     let subject = self.commits.iter().chain(self.compare_commits.iter()).find(|c| c.hash == h).map(|c| c.subject.clone()).unwrap_or_default();
                     let short: String = h.chars().take(7).collect();
+                    let people = self.commits.iter().chain(self.compare_commits.iter()).find(|c| c.hash == h).map(|c| c.people()).unwrap_or_default();
                     egui::Frame::none().inner_margin(egui::Margin::symmetric(18.0, 12.0)).show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         ui.spacing_mut().item_spacing.y = 4.0;
                         ui.label(RichText::new(subject).size(14.5).color(p.text));
                         if let Some((author, date, body)) = &self.commit_info {
                             ui.horizontal(|ui| {
-                                ui.label(RichText::new(author).size(12.5).color(p.text));
+                                if people.is_empty() {
+                                    ui.label(RichText::new(author).size(12.5).color(p.text));
+                                } else {
+                                    let (r, _) = ui.allocate_exact_size(egui::vec2(18.0 + 12.0 * (people.len().min(3) - 1) as f32, 20.0), Sense::hover());
+                                    paint_avatars(ui, &p, r.left_center(), &people, &self.avatars, 18.0);
+                                    ui.label(RichText::new(people_names(&people)).size(12.5).color(p.text));
+                                }
                                 ui.label(RichText::new(format!("\u{b7} {date}")).size(12.5).color(p.muted));
                                 ui.label(RichText::new(short).size(12.5).monospace().color(p.muted));
                             });
+                            let body: String = body.lines().filter(|l| !l.trim().to_lowercase().starts_with("co-authored-by:")).collect::<Vec<_>>().join("\n");
+                            let body = body.trim();
                             if !body.is_empty() {
                                 ui.add_space(4.0);
                                 ui.label(RichText::new(body).size(12.5).color(p.muted));

@@ -49,6 +49,8 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "folder" => Some(include_bytes!("../../assets/icons/folder.svg")),
         "github" => Some(include_bytes!("../../assets/icons/github.svg")),
         "gitlab" => Some(include_bytes!("../../assets/icons/gitlab.svg")),
+        "users" => Some(include_bytes!("../../assets/icons/users.svg")),
+        "info" => Some(include_bytes!("../../assets/icons/info.svg")),
         "help" => Some(include_bytes!("../../assets/icons/help.svg")),
         "history" => Some(include_bytes!("../../assets/icons/history.svg")),
         "home" => Some(include_bytes!("../../assets/icons/home.svg")),

@@ -12,6 +12,7 @@ pub const T_AI: &str = "AI commit message";
 pub const T_SCAN: &str = "Scan machine:";
 pub const T_INFO: &str = "Repo info";
 pub const T_TEST: &str = "Test machine:";
+pub const T_AVATAR: &str = "Avatar:";
 
 /// Open a web page in the default browser.
 pub fn open_url(url: &str) {
@@ -58,6 +59,31 @@ impl App {
             let result = f();
             let _ = tx.send((label, result));
             ctx.request_repaint();
+        });
+    }
+
+    /// Start fetching the picture of `email` unless known or already running.
+    /// `sha` is a commit by this person, if the email is the commit author's.
+    pub fn want_avatar(&mut self, ctx: &egui::Context, email: &str, sha: Option<&str>) {
+        let key = email.trim().to_lowercase();
+        if key.is_empty() || self.avatars.contains_key(&key) {
+            return;
+        }
+        let label = format!("{T_AVATAR}{key}");
+        if self.task_running(&label) || self.tasks.iter().filter(|t| t.starts_with(T_AVATAR)).count() >= 4 {
+            return;
+        }
+        let slug = self
+            .remotes
+            .iter()
+            .find(|r| r.name == self.remote_name)
+            .and_then(|r| git::parse_remote_url(&r.url))
+            .filter(|(h, _)| h == "github.com")
+            .map(|(_, s)| s);
+        let hint = slug.zip(sha.map(String::from));
+        self.spawn_task(ctx, &label, move || {
+            let h = hint.as_ref().map(|(s, c)| (s.as_str(), c.as_str()));
+            git::fetch_avatar(&key, h).map(|p| p.display().to_string())
         });
     }
 
@@ -115,6 +141,9 @@ impl App {
                 let key = l[crate::ui::clone::T_REPOS.len()..].to_string();
                 self.handle_repos_result(&key, r);
             }
+            (l, r) if l.starts_with(T_AVATAR) => {
+                self.avatars.insert(l[T_AVATAR.len()..].to_string(), r.as_ref().ok().map(PathBuf::from));
+            }
             (T_DEVICE, Err(e)) => self.status_msg = e.clone(),
             (T_PRS, Ok(tsv)) => {
                 self.prs = tsv.lines().filter_map(git::PullRequest::from_line).collect();
@@ -160,7 +189,7 @@ impl App {
             _ => {}
         }
         if let Err(e) = res {
-            let quiet = label == T_PRS || label == T_SIGN_IN || label == T_DEVICE || label.starts_with(T_CHECK) || label.starts_with(crate::ui::clone::T_REPOS);
+            let quiet = label == T_PRS || label == T_SIGN_IN || label == T_DEVICE || label.starts_with(T_CHECK) || label.starts_with(T_AVATAR) || label.starts_with(crate::ui::clone::T_REPOS);
             if !quiet {
                 self.status_msg = match label.strip_prefix(T_TEST) {
                     Some(host) => format!("Could not connect to {host}: {e}"),

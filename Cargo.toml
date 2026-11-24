@@ -3,6 +3,13 @@ name = "onaygit"
 version = "0.1.0"
 edition = "2021"
 description = "A simple GitHub Desktop style Git client in Rust"
+authors = ["Tisobyn"]
+repository = "https://github.com/Tisobyn/OnayGit"
+build = "build.rs"
+
+[[bin]]
+name = "OnayGit"
+path = "src/main.rs"
 
 [dependencies]
 eframe = "0.29"

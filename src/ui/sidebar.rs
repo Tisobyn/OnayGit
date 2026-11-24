@@ -116,6 +116,21 @@ impl App {
                                         if ui.add_enabled(ok, btn).clicked() {
                                             do_commit = true;
                                         }
+                                        {
+                                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
+                                            let n = self.coauthors.iter().filter(|(_, on)| *on).count();
+                                            if resp.hovered() || self.coauthor_open.is_some() {
+                                                ui.painter().rect_filled(rect, 6.0, p.hover);
+                                            }
+                                            paint_icon(ui, "users", rect.shrink(5.0), if n > 0 { accent() } else { p.muted });
+                                            if n > 0 {
+                                                ui.painter().text(rect.right_top() + egui::vec2(-1.0, 4.0), Align2::RIGHT_CENTER, n.to_string(), FontId::proportional(10.0), accent());
+                                            }
+                                            if resp.on_hover_text("Co-authors").clicked() {
+                                                self.coauthor_open = if self.coauthor_open.is_some() { None } else { Some(rect.right_top() + egui::vec2(0.0, -6.0)) };
+                                                self.learn_coauthors();
+                                            }
+                                        }
                                         if self.task_running(T_AI) {
                                             ui.spinner();
                                         } else {
@@ -349,6 +364,7 @@ impl App {
                     let _ = git::run(&repo, &["add", "-A"]);
                 }
                 let (subject, body) = self.commit_parts();
+                let body = git::with_coauthors(&body, &self.chosen_coauthors());
                 let r = if self.amend { git::amend(&repo, &subject, &body) } else { git::commit(&repo, &subject, &body) };
                 if self.report(r) {
                     self.summary.clear();

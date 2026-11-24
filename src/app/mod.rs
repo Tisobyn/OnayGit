@@ -3,6 +3,7 @@ use crate::prelude::*;
 
 pub mod accounts;
 pub mod ai;
+pub mod coauthors;
 pub mod history;
 pub mod ignored;
 pub mod hosting;
@@ -46,6 +47,7 @@ pub enum Section {
     Identity,
     Ignore,
     Help,
+    About,
 }
 
 #[derive(Clone)]
@@ -133,6 +135,11 @@ pub struct App {
     pub tour_space: Option<usize>,
     pub focus_filter: bool,
     pub commit_now: bool,
+    /// Co-author choices: person and whether it is on for the next commit.
+    pub coauthors: Vec<(git::Person, bool)>,
+    pub coauthor_open: Option<egui::Pos2>,
+    pub coauthor_name: String,
+    pub coauthor_email: String,
     /// Author, date and message body of the selected commit.
     pub commit_info: Option<(String, String, String)>,
     pub branch: String,
@@ -187,6 +194,8 @@ pub struct App {
     pub repo_styles: HashMap<PathBuf, RepoStyle>,
     pub tip: usize,
     pub tasks: HashSet<String>,
+    /// Profile picture files by lowercase email; `None` when there is none.
+    pub avatars: HashMap<String, Option<PathBuf>>,
     pub tree_view: bool,
     pub system_dark: bool,
     pub acct_adding: bool,
@@ -319,6 +328,10 @@ impl App {
             tour_space: None,
             focus_filter: false,
             commit_now: false,
+            coauthors: coauthors::load(),
+            coauthor_open: None,
+            coauthor_name: String::new(),
+            coauthor_email: String::new(),
             commit_info: None,
             branch: String::new(),
             branches: vec![],
@@ -370,6 +383,7 @@ impl App {
             repo_styles: tabs::load_styles(),
             tip: 0,
             tasks: HashSet::new(),
+            avatars: HashMap::new(),
             system_dark: true,
             tree_view: false,
             acct_adding: false,
@@ -490,6 +504,7 @@ impl App {
                         Section::Ai
                     }
                     "help" => Section::Help,
+                    "about" => Section::About,
                     "remotes" => Section::Remotes,
                     "repostyle" => Section::RepoStyle,
                     "identity" => Section::Identity,
@@ -643,6 +658,7 @@ impl eframe::App for App {
             self.spawn_in(ctx, repo, "Rebasing", &["rebase", &other]);
         }
         self.manage_windows(ctx);
+        self.coauthor_popup(ctx);
 
         self.tab_shortcuts(ctx);
         match self.screen {

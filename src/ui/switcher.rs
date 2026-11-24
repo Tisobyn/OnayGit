@@ -33,6 +33,7 @@ impl App {
             (Section::Editor, "pencil", "External editor"),
             (Section::Ai, "sparkle", "AI"),
             (Section::Help, "help", "Help"),
+            (Section::About, "info", "About"),
         ] {
             rows.push(Row { icon, title: format!("Settings \u{b7} {name}"), sub: "Settings".into(), hit: Hit::Settings(Some(s)) });
         }

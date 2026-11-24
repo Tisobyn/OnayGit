@@ -5,9 +5,62 @@ use super::*;
 pub struct Commit {
     pub hash: String,
     pub author: String,
+    pub email: String,
+    /// People named in `Co-authored-by` trailers.
+    pub coauthors: Vec<Person>,
     pub when: String,
     pub subject: String,
     pub parents: Vec<String>,
+}
+
+/// A name and email, as in `Name <email>`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Person {
+    pub name: String,
+    pub email: String,
+}
+
+impl Person {
+    /// Parse `Name <email>`. Without angle brackets the whole text is the name.
+    pub fn parse(s: &str) -> Option<Person> {
+        let s = s.trim();
+        if s.is_empty() {
+            return None;
+        }
+        match (s.rfind('<'), s.rfind('>')) {
+            (Some(a), Some(b)) if a < b => Some(Person { name: s[..a].trim().to_string(), email: s[a + 1..b].trim().to_string() }),
+            _ => Some(Person { name: s.to_string(), email: String::new() }),
+        }
+    }
+
+    pub fn trailer(&self) -> String {
+        format!("Co-authored-by: {} <{}>", self.name, self.email)
+    }
+}
+
+impl Commit {
+    /// The author followed by the co-authors, without repeats.
+    pub fn people(&self) -> Vec<Person> {
+        let mut v = vec![Person { name: self.author.clone(), email: self.email.clone() }];
+        for c in &self.coauthors {
+            if !v.iter().any(|p| p.email.eq_ignore_ascii_case(&c.email) && !c.email.is_empty()) && c.name != self.author {
+                v.push(c.clone());
+            }
+        }
+        v
+    }
+}
+
+/// `body` with a `Co-authored-by` line for each person not named in it yet.
+pub fn with_coauthors(body: &str, people: &[Person]) -> String {
+    let lower = body.to_lowercase();
+    let lines: Vec<String> = people.iter().filter(|p| !lower.contains(&p.email.to_lowercase())).map(|p| p.trailer()).collect();
+    if lines.is_empty() {
+        return body.to_string();
+    }
+    let has_trailers = body.lines().last().is_some_and(|l| l.trim().to_lowercase().starts_with("co-authored-by:"));
+    let sep = if body.trim().is_empty() { "" } else if has_trailers { "\n" } else { "\n\n" };
+    format!("{}{sep}{}", body.trim_end(), lines.join("\n"))
 }
 
 pub fn commit(repo: &Path, summary: &str, desc: &str) -> Result<String, String> {
@@ -26,7 +79,7 @@ pub fn log(repo: &Path) -> Vec<Commit> {
 pub fn log_range(repo: &Path, range: &str) -> Vec<Commit> {
     run(
         repo,
-        &["log", "--max-count=300", "--topo-order", "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P", range],
+        &["log", "--max-count=300", "--topo-order", "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%ae%x1f%(trailers:key=Co-authored-by,valueonly,unfold,separator=%x1e)", range],
     )
     .unwrap_or_default()
     .lines()
@@ -38,6 +91,8 @@ pub fn log_range(repo: &Path, range: &str) -> Vec<Commit> {
             when: p.next()?.to_string(),
             subject: p.next()?.to_string(),
             parents: p.next().unwrap_or("").split_whitespace().map(String::from).collect(),
+            email: p.next().unwrap_or("").to_string(),
+            coauthors: p.next().unwrap_or("").split('\x1e').filter_map(Person::parse).collect(),
         })
     })
     .collect()
@@ -102,4 +157,25 @@ pub fn revert(repo: &Path, hash: &str) -> Result<String, String> {
 /// `mode` is soft, mixed or hard.
 pub fn reset_to(repo: &Path, hash: &str, mode: &str) -> Result<String, String> {
     run(repo, &["reset", &format!("--{mode}"), hash])
+}
+
+#[cfg(test)]
+mod coauthor_tests {
+    use super::*;
+
+    fn claude() -> Person {
+        Person { name: "Claude".into(), email: "noreply@anthropic.com".into() }
+    }
+
+    #[test]
+    fn adds_trailer_after_blank_line() {
+        assert_eq!(with_coauthors("", &[claude()]), "Co-authored-by: Claude <noreply@anthropic.com>");
+        assert_eq!(with_coauthors("Body", &[claude()]), "Body\n\nCo-authored-by: Claude <noreply@anthropic.com>");
+    }
+
+    #[test]
+    fn no_duplicates() {
+        let b = "Body\n\nCo-authored-by: Claude <noreply@anthropic.com>";
+        assert_eq!(with_coauthors(b, &[claude()]), b);
+    }
 }

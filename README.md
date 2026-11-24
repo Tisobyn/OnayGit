@@ -84,3 +84,13 @@ PORTING.md           list of 1git features and what is done
 ```
 
 Rule of thumb: git commands live in `git/`, drawing lives in `ui/`, state lives in `app/`.
+
+## Version and About
+
+Settings > About shows the version, build (git hash and date), platform, git version, links and credits. The version comes from `Cargo.toml`. The binary is named `OnayGit`.
+
+## Commit pictures and co-authors
+
+History rows show the author and any `Co-authored-by` people with round profile pictures. Pictures come from the GitHub CLI (`gh`), GitHub noreply emails, or Gravatar, and are cached in `~/.onaygit_avatars`. Missing ones show an initial.
+
+The people icon in the commit box lets you choose co-authors for the next commit. Choices are saved in `~/.onaygit_coauthors`. Co-authors already seen in the history are offered too.

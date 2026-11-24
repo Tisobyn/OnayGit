@@ -31,6 +31,7 @@ impl App {
                     (Section::Editor, "pencil", "External editor"),
                     (Section::Ai, "sparkle", "AI"),
                     (Section::Help, "help", "Help"),
+                    (Section::About, "info", "About"),
                 ] {
                     if rail_item(ui, icon, name, self.section == s, &p).clicked() {
                         self.section = s;
@@ -100,7 +101,7 @@ impl App {
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                     ui.set_max_width(match self.section {
                         Section::Spaces | Section::Git | Section::Editor | Section::Ai | Section::Accounts => 480.0,
-                        Section::Privacy | Section::Help => 560.0,
+                        Section::Privacy | Section::Help | Section::About => 560.0,
                         Section::Keybinds => 760.0,
                         _ => 580.0,
                     });
@@ -119,6 +120,7 @@ impl App {
                         Section::RepoStyle => self.repo_style_page(ui, &p),
                         Section::Identity => self.identity_page(ui, &p),
                         Section::Help => self.help_page(ui, &p),
+                        Section::About => self.about_page(ui, &p),
                     }
                 });
             });
@@ -1168,6 +1170,101 @@ impl App {
             self.device = None;
             self.device_waiting = false;
             self.status_msg.clear();
+        }
+    }
+
+    fn about_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
+        let version = env!("CARGO_PKG_VERSION");
+        let hash = env!("ONAYGIT_GIT_HASH");
+        let date = env!("ONAYGIT_BUILD_DATE");
+        let git_v = git::run(&home_dir(), &["--version"]).unwrap_or_default().trim().trim_start_matches("git version ").to_string();
+        let platform = format!("{} {}", if std::env::consts::OS == "macos" { "macOS" } else { std::env::consts::OS }, std::env::consts::ARCH);
+        let info = format!("OnayGit {version} ({hash}, built {date})\nPlatform: {platform}\nGit: {git_v}");
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            ui.add(egui::Image::from_bytes("bytes://about-icon.png", include_bytes!("../../assets/icon-512.png").as_slice()).fit_to_exact_size(egui::vec2(72.0, 72.0)).rounding(16.0));
+            ui.add_space(6.0);
+            ui.vertical(|ui| {
+                ui.add_space(8.0);
+                ui.label(RichText::new("OnayGit").size(24.0).strong().color(p.text));
+                ui.label(RichText::new(format!("Version {version}")).size(13.5).color(p.muted));
+                ui.label(RichText::new("A simple Git client for macOS, written in Rust.").size(12.5).color(p.muted));
+            });
+        });
+        ui.add_space(16.0);
+        let mut url: Option<&str> = None;
+        let mut copy = false;
+        settings_group(ui, p, "Details", "", |_| {}, |ui| {
+            for (k, v) in [
+                ("Version", version.to_string()),
+                ("Build", format!("{hash} \u{b7} {date}")),
+                ("Platform", platform.clone()),
+                ("Git", if git_v.is_empty() { "not found".into() } else { git_v.clone() }),
+                ("Author", env!("CARGO_PKG_AUTHORS").to_string()),
+                ("Settings files", "~/.onaygit_*".to_string()),
+            ] {
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(k).size(13.5).color(p.text));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(RichText::new(v).size(13.0).color(p.muted));
+                        });
+                    });
+                });
+            }
+        });
+        settings_group(ui, p, "Links", "", |_| {}, |ui| {
+            for (title, button, link) in [
+                ("Source code", "Open GitHub", "https://github.com/Tisobyn/OnayGit"),
+                ("Report a problem", "Create an issue", "https://github.com/Tisobyn/OnayGit/issues/new"),
+                ("Releases", "Open releases", "https://github.com/Tisobyn/OnayGit/releases"),
+            ] {
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(title).size(13.5).color(p.text));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button(button).clicked() {
+                                url = Some(link);
+                            }
+                        });
+                    });
+                });
+            }
+            group_row(ui, p, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Version details").size(13.5).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("Copy").clicked() {
+                            copy = true;
+                        }
+                    });
+                });
+            });
+        });
+        settings_group(ui, p, "Credits", "", |_| {}, |ui| {
+            for (k, v) in [
+                ("Interface", "egui and eframe"),
+                ("Icons", "Phosphor Icons (MIT)"),
+                ("Design", "Inspired by 1git"),
+                ("Git engine", "Your own git, run as a command"),
+            ] {
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(k).size(13.5).color(p.text));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(RichText::new(v).size(13.0).color(p.muted));
+                        });
+                    });
+                });
+            }
+        });
+        ui.label(RichText::new("OnayGit has no telemetry and sends nothing to servers of its own.").size(12.0).color(p.muted));
+        if copy {
+            ui.ctx().copy_text(info);
+            self.status_msg = "Copied".into();
+        }
+        if let Some(u) = url {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(u));
         }
     }
 

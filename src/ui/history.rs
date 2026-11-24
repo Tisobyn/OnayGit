@@ -162,6 +162,7 @@ impl App {
                 }
             }
         }
+        let mut want: Vec<(String, Option<String>)> = vec![];
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
             for (i, c) in list.iter().enumerate() {
@@ -194,7 +195,14 @@ impl App {
                     }
                 }
                 let short: String = c.hash.chars().take(7).collect();
-                clip.text(egui::pos2(x, rect.min.y + 37.0), Align2::LEFT_CENTER, format!("{} \u{b7} {} \u{b7} {short}", c.author, c.when), FontId::proportional(11.5), p.muted);
+                let people = c.people();
+                for (n, person) in people.iter().take(3).enumerate() {
+                    if !self.avatars.contains_key(&person.email.trim().to_lowercase()) {
+                        want.push((person.email.clone(), (n == 0).then(|| c.hash.clone())));
+                    }
+                }
+                let aw = paint_avatars(ui, &p, egui::pos2(x, rect.min.y + 37.0), &people, &self.avatars, 16.0);
+                clip.text(egui::pos2(x + aw + 6.0, rect.min.y + 37.0), Align2::LEFT_CENTER, format!("{} \u{2022} {} \u{b7} {short}", people_names(&people), c.when), FontId::proportional(11.5), p.muted);
                 if !comparing && i < unpushed {
                     paint_icon(ui, "arrowUp", egui::Rect::from_center_size(egui::pos2(rect.max.x - 24.0, rect.center().y), egui::vec2(14.0, 14.0)), p.muted);
                 }
@@ -257,6 +265,10 @@ impl App {
                 });
             }
         });
+        let ctx = ui.ctx().clone();
+        for (email, sha) in want {
+            self.want_avatar(&ctx, &email, sha.as_deref());
+        }
 
         if let Some(o) = direction {
             self.compare_outgoing = o;
