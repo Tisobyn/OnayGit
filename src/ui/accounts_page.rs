@@ -20,17 +20,13 @@ impl App {
             if !self.settings.ai_added {
                 ui.add_space(26.0);
                 let w = ui.available_width();
-                let (rect, _) = ui.allocate_exact_size(egui::vec2(w, 130.0), Sense::hover());
-                let c = rect.center();
-                let st = egui::Stroke::new(1.2_f32, p.muted);
-                let pt = ui.painter();
-                pt.rect_stroke(egui::Rect::from_center_size(c, egui::vec2(88.0, 96.0)), 14.0, st);
-                for dx in [-72.0_f32, 72.0] {
-                    pt.rect_stroke(egui::Rect::from_center_size(c + egui::vec2(dx, 0.0), egui::vec2(22.0, 48.0)), 6.0, st);
-                }
-                paint_icon(ui, "userCircle", egui::Rect::from_center_size(c - egui::vec2(0.0, 8.0), egui::vec2(46.0, 46.0)), p.muted);
+                let (rect, _) = ui.allocate_exact_size(egui::vec2(w, 64.0), Sense::hover());
+                let tile = egui::Rect::from_center_size(rect.center(), egui::vec2(56.0, 56.0));
+                ui.painter().rect_filled(tile, 16.0, p.hover);
+                ui.painter().rect_stroke(tile, 16.0, egui::Stroke::new(1.0_f32, p.border));
+                paint_icon(ui, "sparkle", tile.shrink(15.0), p.muted);
                 ui.vertical_centered(|ui| {
-                    ui.add_space(6.0);
+                    ui.add_space(10.0);
                     ui.label(RichText::new("No AI accounts added.").size(15.0).color(p.text));
                     ui.add_space(4.0);
                     ui.label(RichText::new("Add an AI account or local CLI agent, then choose a default for commit messages.").size(12.5).color(p.muted));
