@@ -16,7 +16,7 @@ fn snap_path(repo: &Path, file: &str) -> Option<PathBuf> {
 
 /// Ignored files small enough to track.
 pub fn ignored_files(repo: &Path) -> Vec<String> {
-    let out = git::run_any(repo, &["ls-files", "-o", "-i", "--exclude-standard"]);
+    let out = git::run_any(repo, &["ls-files", "-o", "-i", "--exclude-standard", "--directory"]);
     out.lines()
         .filter(|l| !l.is_empty() && !l.ends_with('/'))
         .filter(|l| std::fs::metadata(repo.join(l)).is_ok_and(|m| m.is_file() && m.len() <= MAX_BYTES))
@@ -33,6 +33,7 @@ impl App {
             return;
         }
         self.ignored_files = ignored_files(&repo);
+        self.ignored_refresh_status();
         if self.ignored_sel.as_ref().is_some_and(|s| !self.ignored_files.contains(s)) {
             self.ignored_sel = None;
         }
@@ -51,18 +52,26 @@ impl App {
         self.ignored_has_snap = snap.is_some();
     }
 
-    /// Mark which files differ from their snapshot.
+    /// Status of one file, from the cache filled by `ignored_refresh_status`.
     pub fn ignored_status(&self, file: &str) -> char {
-        let Some(repo) = self.repo() else { return ' ' };
-        match snap_path(&repo, file).filter(|s| s.exists()) {
-            None => 'A',
-            Some(s) => {
-                if std::fs::read(&s).ok() == std::fs::read(repo.join(file)).ok() {
-                    ' '
-                } else {
-                    'M'
-                }
-            }
+        self.ignored_st.get(file).copied().unwrap_or(' ')
+    }
+
+    /// Compare every listed file with its snapshot once, not on every frame.
+    pub fn ignored_refresh_status(&mut self) {
+        self.ignored_st.clear();
+        let Some(repo) = self.repo() else { return };
+        let Some(dir) = snap_dir(&repo) else { return };
+        for f in &self.ignored_files {
+            let snap = dir.join(f.replace('/', "%2F"));
+            let st = if !snap.exists() {
+                'A'
+            } else if std::fs::read(&snap).ok() == std::fs::read(repo.join(f)).ok() {
+                ' '
+            } else {
+                'M'
+            };
+            self.ignored_st.insert(f.clone(), st);
         }
     }
 
@@ -76,6 +85,7 @@ impl App {
             }
         }
         self.status_msg = format!("Saved {} ignored files", self.ignored_files.len());
+        self.ignored_refresh_status();
         self.ignored_diff_load();
     }
 
@@ -87,6 +97,7 @@ impl App {
                 Err(e) => self.status_msg = format!("Restore failed: {e}"),
             }
         }
+        self.ignored_refresh_status();
         self.ignored_diff_load();
     }
 }
