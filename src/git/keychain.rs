@@ -1,5 +1,4 @@
 //! Secrets (access tokens, API keys) live in the macOS Keychain.
-#[allow(unused_imports)]
 use super::*;
 
 const SERVICE: &str = "OnayGit";

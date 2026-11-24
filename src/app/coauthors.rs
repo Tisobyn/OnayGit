@@ -1,5 +1,4 @@
 //! Co-authors the user can add to a commit as `Co-authored-by` trailers.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 fn path() -> PathBuf {

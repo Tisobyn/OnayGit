@@ -1,5 +1,4 @@
 //! GitHub and GitLab accounts. Tokens are kept in the Keychain, never in files.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 fn accounts_path() -> PathBuf {

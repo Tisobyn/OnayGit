@@ -1,5 +1,4 @@
 //! Commit graph drawing for one history row.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 pub const LANE_W: f32 = 10.0;

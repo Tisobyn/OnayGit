@@ -1,5 +1,4 @@
 //! Image files in a diff: save the old version to a temporary file so it can be shown.
-#[allow(unused_imports)]
 use super::*;
 use std::path::PathBuf;
 

@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -70,8 +69,6 @@ pub struct Pal {
     pub bg: Color32,
     pub sidebar: Color32,
     pub toolbar: Color32,
-    #[allow(dead_code)]
-    pub home: Color32,
     pub hover: Color32,
     pub input: Color32,
     pub text: Color32,
@@ -95,7 +92,6 @@ pub fn pal(theme: Theme) -> Pal {
             bg: c(32, 34, 39),
             sidebar: c(32, 34, 39),
             toolbar: c(32, 34, 39),
-            home: c(32, 34, 39),
             hover: c(45, 48, 56),
             input: c(27, 29, 34),
             text: c(232, 234, 237),
@@ -111,7 +107,6 @@ pub fn pal(theme: Theme) -> Pal {
             bg: c(13, 17, 23),
             sidebar: c(13, 17, 23),
             toolbar: c(13, 17, 23),
-            home: c(13, 17, 23),
             hover: c(30, 36, 46),
             input: c(6, 8, 12),
             text: c(230, 237, 243),
@@ -127,7 +122,6 @@ pub fn pal(theme: Theme) -> Pal {
             bg: c(46, 52, 64),
             sidebar: c(46, 52, 64),
             toolbar: c(46, 52, 64),
-            home: c(46, 52, 64),
             hover: c(59, 66, 82),
             input: c(36, 41, 51),
             text: c(236, 239, 244),
@@ -143,7 +137,6 @@ pub fn pal(theme: Theme) -> Pal {
             bg: c(255, 255, 255),
             sidebar: c(255, 255, 255),
             toolbar: c(255, 255, 255),
-            home: c(255, 255, 255),
             hover: c(243, 243, 243),
             input: Color32::WHITE,
             text: c(30, 30, 30),
@@ -159,7 +152,6 @@ pub fn pal(theme: Theme) -> Pal {
             bg: c(253, 246, 227),
             sidebar: c(253, 246, 227),
             toolbar: c(253, 246, 227),
-            home: c(253, 246, 227),
             hover: c(234, 226, 204),
             input: c(255, 252, 240),
             text: c(59, 66, 70),

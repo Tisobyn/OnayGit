@@ -1,5 +1,4 @@
 //! Full-page Clone: pick a repository from an account or paste a URL.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 pub const T_REPOS: &str = "Repos:";

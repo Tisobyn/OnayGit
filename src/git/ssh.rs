@@ -1,6 +1,5 @@
 //! Repositories on other machines. A remote repository path looks like
 //! `ssh://user@host/abs/path`. Everything runs through the `ssh` command with key login.
-#[allow(unused_imports)]
 use super::*;
 use std::io::Write;
 use std::path::PathBuf;

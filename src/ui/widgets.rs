@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 pub fn repo_name(p: &Path) -> String {

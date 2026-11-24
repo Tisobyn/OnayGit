@@ -1,5 +1,4 @@
 //! Tags.
-#[allow(unused_imports)]
 use super::*;
 
 #[derive(Clone, Debug)]

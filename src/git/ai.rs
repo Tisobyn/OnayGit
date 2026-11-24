@@ -1,5 +1,4 @@
 //! AI commit messages through Claude Code, Codex, a custom command, or an OpenAI compatible API.
-#[allow(unused_imports)]
 use super::*;
 use serde_json::{json, Value};
 use std::io::Write;

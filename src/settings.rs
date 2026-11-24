@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::git::{AiConfig, AiProvider};
 use crate::prelude::*;
 

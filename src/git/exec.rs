@@ -1,5 +1,4 @@
 //! Running git, on this Mac or on another machine over SSH.
-#[allow(unused_imports)]
 use super::*;
 use std::io::Write;
 use std::process::Stdio;

@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use super::*;
 
 /// Open a file in the user's editor command, for example `code` or `zed`.

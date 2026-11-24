@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use super::*;
 
 pub fn current_branch(repo: &Path) -> String {

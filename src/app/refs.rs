@@ -1,5 +1,4 @@
 //! Stashes, tags and worktrees.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, Copy)]

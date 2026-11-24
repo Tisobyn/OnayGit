@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use crate::prelude::*;
 use crate::app::spaces::space_icon_name;
 use crate::ui::settings_page::space_color32;
@@ -96,7 +95,7 @@ impl App {
                 self.want_owner_avatars(ctx);
                 ctx.request_repaint_after(Duration::from_secs(2));
                 ui.horizontal(|ui| {
-                    let w = ui.available_width() - 90.0;
+                    let w = (ui.available_width() - 90.0).max(100.0);
                     egui::Frame::none().stroke(egui::Stroke::new(1.0_f32, p.border)).rounding(8.0).show(ui, |ui| {
                         ui.set_width(w - 2.0);
                         ui.horizontal(|ui| {

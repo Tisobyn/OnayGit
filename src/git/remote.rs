@@ -1,5 +1,4 @@
 //! Remotes.
-#[allow(unused_imports)]
 use super::*;
 
 #[derive(Clone, Debug, PartialEq)]

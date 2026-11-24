@@ -1,5 +1,4 @@
 //! Stashed changes list in the Changes tab.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

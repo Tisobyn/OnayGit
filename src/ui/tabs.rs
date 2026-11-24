@@ -1,5 +1,4 @@
 //! Tab bar with the open repositories.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

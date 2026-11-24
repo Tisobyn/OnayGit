@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use super::*;
 
 pub fn is_repo(path: &Path) -> bool {

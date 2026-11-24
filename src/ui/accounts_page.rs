@@ -1,5 +1,4 @@
 //! Settings pages: Accounts (GitHub / GitLab) and AI.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {
@@ -72,7 +71,7 @@ impl App {
         ui.label(RichText::new(if self.settings.ai_added { "Edit account" } else { "Add account" }).size(14.0).color(p.text));
         ui.add_space(8.0);
         let footer_h = 58.0;
-        egui::ScrollArea::vertical().auto_shrink([false, false]).max_height(ui.available_height() - footer_h).show(ui, |ui| {
+        egui::ScrollArea::vertical().auto_shrink([false, false]).max_height((ui.available_height() - footer_h).max(60.0)).show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 6.0;
             ui.label(RichText::new("Provider").size(13.0).color(p.text));
             ui.horizontal(|ui| {

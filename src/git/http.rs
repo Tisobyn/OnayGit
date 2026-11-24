@@ -1,6 +1,5 @@
 //! Tiny HTTP client on top of `curl`. The request (and the token in it) goes through
 //! stdin as a curl config, so secrets never appear in the process list.
-#[allow(unused_imports)]
 use super::*;
 use std::io::Write;
 use std::process::Stdio;

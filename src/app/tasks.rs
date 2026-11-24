@@ -1,5 +1,4 @@
 //! Background tasks (network, AI, ssh) and their results.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 pub const T_SIGN_IN: &str = "Sign in";

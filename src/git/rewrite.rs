@@ -1,5 +1,4 @@
 //! Rewrite history without an interactive editor: drop, squash and reword.
-#[allow(unused_imports)]
 use super::*;
 
 #[derive(Clone, Copy, PartialEq, Debug)]

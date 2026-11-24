@@ -1,5 +1,4 @@
 //! Ignored changes: files git ignores, with a local snapshot to compare and restore.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 const MAX_FILES: usize = 400;

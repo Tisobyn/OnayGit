@@ -1,5 +1,4 @@
 //! Worktrees.
-#[allow(unused_imports)]
 use super::*;
 use std::path::PathBuf;
 

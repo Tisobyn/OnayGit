@@ -1,5 +1,4 @@
 //! AI commit messages.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

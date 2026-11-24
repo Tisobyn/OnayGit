@@ -1,5 +1,4 @@
 //! Merge, rebase, cherry-pick and revert in progress, and conflict resolution.
-#[allow(unused_imports)]
 use super::*;
 
 #[derive(Clone, Copy, PartialEq, Debug)]

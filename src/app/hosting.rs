@@ -1,5 +1,4 @@
 //! Publish a repository and work with pull / merge requests.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

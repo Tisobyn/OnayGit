@@ -1,5 +1,4 @@
 //! Phosphor Light icons taken from 1git (MIT, see assets/icons/LICENSE-Phosphor.txt).
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 fn svg(name: &str) -> Option<&'static [u8]> {
@@ -42,10 +41,8 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "close" => Some(include_bytes!("../../assets/icons/close.svg")),
         "codex" => Some(include_bytes!("../../assets/icons/codex.svg")),
         "contrast" => Some(include_bytes!("../../assets/icons/contrast.svg")),
-        "copy" => Some(include_bytes!("../../assets/icons/copy.svg")),
         "desktop" => Some(include_bytes!("../../assets/icons/desktop.svg")),
         "grid" => Some(include_bytes!("../../assets/icons/grid.svg")),
-        "direction" => Some(include_bytes!("../../assets/icons/direction.svg")),
         "folder" => Some(include_bytes!("../../assets/icons/folder.svg")),
         "github" => Some(include_bytes!("../../assets/icons/github.svg")),
         "gitlab" => Some(include_bytes!("../../assets/icons/gitlab.svg")),
@@ -54,7 +51,6 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "help" => Some(include_bytes!("../../assets/icons/help.svg")),
         "history" => Some(include_bytes!("../../assets/icons/history.svg")),
         "home" => Some(include_bytes!("../../assets/icons/home.svg")),
-        "idCard" => Some(include_bytes!("../../assets/icons/idCard.svg")),
         "key" => Some(include_bytes!("../../assets/icons/key.svg")),
         "keyboard" => Some(include_bytes!("../../assets/icons/keyboard.svg")),
         "layers" => Some(include_bytes!("../../assets/icons/layers.svg")),
@@ -66,17 +62,13 @@ fn svg(name: &str) -> Option<&'static [u8]> {
         "publish" => Some(include_bytes!("../../assets/icons/publish.svg")),
         "pull" => Some(include_bytes!("../../assets/icons/pull.svg")),
         "push" => Some(include_bytes!("../../assets/icons/push.svg")),
-        "reconnect" => Some(include_bytes!("../../assets/icons/reconnect.svg")),
         "remove" => Some(include_bytes!("../../assets/icons/remove.svg")),
         "settings" => Some(include_bytes!("../../assets/icons/settings.svg")),
         "search" => Some(include_bytes!("../../assets/icons/search.svg")),
         "shield" => Some(include_bytes!("../../assets/icons/shield.svg")),
         "sparkle" => Some(include_bytes!("../../assets/icons/sparkle.svg")),
         "ignored" => Some(include_bytes!("../../assets/icons/ignored.svg")),
-        "stop" => Some(include_bytes!("../../assets/icons/stop.svg")),
-        "swap" => Some(include_bytes!("../../assets/icons/swap.svg")),
         "sync" => Some(include_bytes!("../../assets/icons/sync.svg")),
-        "tabs" => Some(include_bytes!("../../assets/icons/tabs.svg")),
         "terminal" => Some(include_bytes!("../../assets/icons/terminal.svg")),
         "tree" => Some(include_bytes!("../../assets/icons/tree.svg")),
         "userCircle" => Some(include_bytes!("../../assets/icons/userCircle.svg")),

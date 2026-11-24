@@ -1,5 +1,4 @@
 //! Tags and worktrees windows.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

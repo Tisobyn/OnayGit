@@ -1,5 +1,4 @@
 //! Banner shown while a merge, rebase, cherry-pick or revert is waiting for you.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

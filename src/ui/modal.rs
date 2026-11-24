@@ -1,5 +1,4 @@
 //! Dialog look shared by all dialogs: dimmed backdrop, bold title, close button, bordered fields.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 /// Where a dialog sits: centered, or with a corner pinned to a point (a popover).

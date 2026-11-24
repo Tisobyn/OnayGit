@@ -1,5 +1,4 @@
 //! Spaces: named groups of repositories shown on the home screen.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, PartialEq, Debug)]

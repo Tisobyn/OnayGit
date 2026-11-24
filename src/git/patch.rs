@@ -1,5 +1,4 @@
 //! Partial staging: build a patch from selected diff lines and apply it to the index.
-#[allow(unused_imports)]
 use super::*;
 use std::collections::HashSet;
 

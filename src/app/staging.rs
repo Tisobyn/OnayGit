@@ -1,5 +1,4 @@
 //! Partial staging, compare and ignore actions.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

@@ -1,5 +1,4 @@
 //! Compact diff renderer with line numbers and optional line selection.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 /// Something the user did in the diff.
@@ -243,6 +242,9 @@ pub fn draw_diff(
                             }
                         };
                         for (r, t) in &spans {
+                            if r.start < at || r.end > l.text.len() || !l.text.is_char_boundary(r.start) || !l.text.is_char_boundary(r.end) {
+                                continue;
+                            }
                             push(&mut job, &l.text[at..r.start], p.text);
                             push(&mut job, &l.text[r.clone()], syntax_color(dark, *t, p.text));
                             at = r.end;

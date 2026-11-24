@@ -1,5 +1,4 @@
 //! Publish repository and pull request windows.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

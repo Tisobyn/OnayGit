@@ -1,5 +1,4 @@
 //! History tab: compare bar and commit list with graph. The changed files of the selected commit are in a column on the right.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {

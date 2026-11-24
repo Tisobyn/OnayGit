@@ -1,5 +1,4 @@
 //! Other machines reached over SSH.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, PartialEq, Debug)]

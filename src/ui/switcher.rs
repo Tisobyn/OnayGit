@@ -1,5 +1,4 @@
 //! Command palette (Cmd+P): actions, settings pages, repositories and machines.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone)]

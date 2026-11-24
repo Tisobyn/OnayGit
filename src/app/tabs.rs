@@ -1,5 +1,4 @@
 //! Tabs (several repositories open in one window) and per-repository looks.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, PartialEq)]

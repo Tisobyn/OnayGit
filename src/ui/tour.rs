@@ -1,5 +1,4 @@
 //! Guided tour: small tips next to the real controls, shown once.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 const STEPS: [(&str, &str); 3] = [

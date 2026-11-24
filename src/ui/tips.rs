@@ -1,5 +1,4 @@
 //! Welcome window and guided tips.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 const TIPS: [&str; 9] = [

@@ -1,5 +1,4 @@
 //! GitHub and GitLab: accounts, creating repositories, pull / merge requests.
-#[allow(unused_imports)]
 use super::*;
 use serde_json::{json, Value};
 

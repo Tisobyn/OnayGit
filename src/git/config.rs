@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 use super::*;
 
 pub fn config_get(key: &str) -> String {

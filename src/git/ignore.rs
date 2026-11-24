@@ -1,5 +1,4 @@
 //! Reading and editing the repository `.gitignore`.
-#[allow(unused_imports)]
 use super::*;
 
 pub fn read_ignore(repo: &Path) -> String {

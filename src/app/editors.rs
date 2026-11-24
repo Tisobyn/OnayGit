@@ -1,5 +1,4 @@
 //! External editor: installed applications and per-file-type rules.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 #[derive(Clone, PartialEq, Debug)]

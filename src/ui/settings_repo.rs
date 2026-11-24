@@ -1,5 +1,4 @@
 //! Settings pages that belong to the open repository: Remotes and Appearance.
-#[allow(unused_imports)]
 use crate::prelude::*;
 
 impl App {
