@@ -23,4 +23,5 @@ pub mod theme;
 pub mod tips;
 pub mod tour;
 pub mod toolbar;
+pub mod toolbar_menu;
 pub mod widgets;

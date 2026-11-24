@@ -1,23 +1,18 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
+use crate::ui::toolbar_menu::{tb_cell, TbMenu};
 
 impl App {
     pub fn toolbar(&mut self, ctx: &egui::Context) {
         self.tour_rects[1] = None;
         let p = self.pal();
-        let mut goto_home = false;
-        let mut open_dialog: Option<Dialog> = None;
         let mut goto_settings = false;
-        let mut switch_repo: Option<usize> = None;
-        let mut switch_branch: Option<String> = None;
-        let mut create_branch = false;
-        let mut open_prs = false;
         let mut open_pub = false;
-        let mut merge_branch: Option<String> = None;
-        let mut ask: Option<Confirm> = None;
         let remote = self.remote_name.clone();
         let rstyle = self.repo().map(|r| self.style_of(&r));
         let mut sync: Option<(&str, Vec<&str>)> = None;
+        let mut toggle: Option<TbMenu> = None;
+        let mut cells = [egui::Rect::NOTHING; 2];
 
         egui::TopBottomPanel::top("toolbar")
             .exact_height(44.0)
@@ -40,97 +35,21 @@ impl App {
                         Some(st) => icon(ui, &st.icon, 18.0, ACCENTS[st.color % ACCENTS.len()].1),
                         None => icon(ui, "folder", 18.0, p.muted),
                     }
-                    ui.menu_button(two_line("Current Repository", &name, &p), |ui| {
-                        ui.set_min_width(220.0);
-                        for (i, r) in self.repos.iter().enumerate() {
-                            if ui.selectable_label(Some(i) == self.current, repo_name(r)).clicked() {
-                                switch_repo = Some(i);
-                                ui.close_menu();
-                            }
-                        }
-                        ui.separator();
-                        if ui.button("Tags...").clicked() {
-                            open_dialog = Some(Dialog::Tags);
-                            ui.close_menu();
-                        }
-                        if ui.button("Worktrees...").clicked() {
-                            open_dialog = Some(Dialog::Worktrees);
-                            ui.close_menu();
-                        }
-                        if ui.button("Pull requests...").clicked() {
-                            open_prs = true;
-                            ui.close_menu();
-                        }
-                        ui.separator();
-                        if ui.button("All repositories...").clicked() {
-                            goto_home = true;
-                            ui.close_menu();
-                        }
-                    });
+                    let r0 = ui.cursor().left_top();
+                    if tb_cell(ui, &p, two_line("Current Repository", &name, &p), self.tb_menu == Some(TbMenu::Repo)) {
+                        toggle = Some(TbMenu::Repo);
+                    }
+                    cells[0] = egui::Rect::from_min_max(egui::pos2(r0.x - 40.0, ui.max_rect().top()), egui::pos2(ui.cursor().left() + 160.0, ui.max_rect().bottom()));
                     toolbar_divider(ui);
 
                     // Branch block
                     icon(ui, "branch", 18.0, p.muted);
-                    let branch_btn = ui.menu_button(two_line("Current Branch", &self.branch, &p), |ui| {
-                        ui.set_min_width(240.0);
-                        ui.add(
-                            egui::TextEdit::singleline(&mut self.branch_filter)
-                                .hint_text("Filter branches")
-                                .desired_width(f32::INFINITY),
-                        );
-                        let q = self.branch_filter.to_lowercase();
-                        egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
-                            ui.label(RichText::new("LOCAL").size(10.5).color(p.muted));
-                            for b in self.branches.iter().filter(|b| q.is_empty() || b.to_lowercase().contains(&q)) {
-                                if ui.selectable_label(*b == self.branch, b).clicked() {
-                                    switch_branch = Some(b.clone());
-                                    ui.close_menu();
-                                }
-                            }
-                            if !self.remote_branches.is_empty() {
-                                ui.add_space(4.0);
-                                ui.label(RichText::new("REMOTE").size(10.5).color(p.muted));
-                                for b in self.remote_branches.iter().filter(|b| q.is_empty() || b.to_lowercase().contains(&q)) {
-                                    if ui.selectable_label(false, b).clicked() {
-                                        let local = b.split_once('/').map(|x| x.1).unwrap_or(b);
-                                        switch_branch = Some(local.to_string());
-                                        ui.close_menu();
-                                    }
-                                }
-                            }
-                        });
-                        ui.separator();
-                        let others: Vec<String> =
-                            self.branches.iter().filter(|b| **b != self.branch).cloned().collect();
-                        ui.add_enabled_ui(!others.is_empty(), |ui| {
-                            ui.menu_button(format!("Merge into {}...", self.branch), |ui| {
-                                for b in &others {
-                                    if ui.button(b).clicked() {
-                                        merge_branch = Some(b.clone());
-                                        ui.close_menu();
-                                    }
-                                }
-                            });
-                            ui.menu_button("Delete branch...", |ui| {
-                                for b in &others {
-                                    if ui.button(b).clicked() {
-                                        ask = Some(Confirm::DeleteBranch(b.clone()));
-                                        ui.close_menu();
-                                    }
-                                }
-                            });
-                        });
-                        ui.separator();
-                        let r = ui.label("New branch");
-                        self.tour_rects[1] = Some(r.rect);
-                        ui.text_edit_singleline(&mut self.new_branch);
-                        let ok = !self.new_branch.trim().is_empty();
-                        if ui.add_enabled(ok, egui::Button::new("Create branch")).clicked() {
-                            create_branch = true;
-                            ui.close_menu();
-                        }
-                    });
-                    self.tour_rects[0] = Some(branch_btn.response.rect);
+                    let b0 = ui.cursor().left_top();
+                    if tb_cell(ui, &p, two_line("Current Branch", &self.branch, &p), self.tb_menu == Some(TbMenu::Branch)) {
+                        toggle = Some(TbMenu::Branch);
+                    }
+                    cells[1] = egui::Rect::from_min_max(egui::pos2(b0.x - 30.0, ui.max_rect().top()), egui::pos2(ui.cursor().left() + 20.0, ui.max_rect().bottom()));
+                    self.tour_rects[0] = Some(cells[1]);
                     toolbar_divider(ui);
 
                     // Sync block (Fetch / Pull / Push / Publish like GitHub Desktop)
@@ -202,55 +121,16 @@ impl App {
                 });
             });
 
-        if open_dialog.is_some() {
-            self.dialog = open_dialog;
+        if let Some(m) = toggle {
+            self.toggle_tb_menu(m);
         }
+        self.tb_menus(ctx, cells);
+
         if open_pub {
             self.open_publish();
         }
-        if open_prs {
-            self.open_pull_requests(ctx);
-        }
-        if goto_home {
-            self.screen = Screen::Home;
-        }
         if goto_settings {
             self.open_settings();
-        }
-        if let Some(i) = switch_repo {
-            self.current = Some(i);
-            self.selected_file = None;
-            self.selected_commit = None;
-            self.commit_diff.clear();
-            self.refresh();
-        }
-        if let Some(b) = switch_branch {
-            if let Some(repo) = self.repo() {
-                let r = git::checkout(&repo, &b);
-                self.report(r);
-                self.refresh();
-            }
-        }
-        if let Some(b) = merge_branch {
-            if let Some(repo) = self.repo() {
-                let r = git::merge(&repo, &b);
-                self.report(r);
-                self.refresh();
-            }
-        }
-        if ask.is_some() {
-            self.confirm = ask;
-        }
-        if create_branch {
-            self.tour_done(1);
-            if let Some(repo) = self.repo() {
-                let name = self.new_branch.trim().replace(' ', "-");
-                let r = git::create_branch(&repo, &name);
-                if self.report(r) {
-                    self.new_branch.clear();
-                }
-                self.refresh();
-            }
         }
         if let Some((label, args)) = sync {
             if let Some(repo) = self.repo() {
