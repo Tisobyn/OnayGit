@@ -1,4 +1,5 @@
 pub mod accounts_page;
+pub mod clone;
 pub mod conflicts;
 pub mod dialogs;
 pub mod diff_view;

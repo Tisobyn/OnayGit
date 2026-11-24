@@ -19,6 +19,7 @@ pub enum Screen {
     Home,
     Repo,
     Settings,
+    Clone,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -94,9 +95,13 @@ pub struct App {
     // home
     pub search: String,
     pub grid: bool,
-    pub clone_open: bool,
     pub clone_url: String,
     pub clone_dir: Option<PathBuf>,
+    pub clone_source: Option<usize>,
+    pub clone_pick: Option<String>,
+    pub clone_search: String,
+    pub clone_error: String,
+    pub clone_repos: std::collections::HashMap<String, Vec<git::RemoteRepo>>,
     pub create_open: bool,
     pub create_dir: Option<PathBuf>,
     pub create_branch: String,
@@ -267,9 +272,13 @@ impl App {
             repos,
             search: String::new(),
             grid: false,
-            clone_open: false,
             clone_url: String::new(),
             clone_dir: None,
+            clone_source: None,
+            clone_pick: None,
+            clone_search: String::new(),
+            clone_error: String::new(),
+            clone_repos: Default::default(),
             create_open: false,
             create_dir: None,
             create_branch: "main".into(),
@@ -485,8 +494,7 @@ impl App {
             }
             Ok("machine") => app.dialog = Some(Dialog::AddMachine),
             Ok("clone") => {
-                app.screen = Screen::Home;
-                app.clone_open = true;
+                app.open_clone();
             }
             Ok("create") => {
                 app.screen = Screen::Home;
@@ -615,6 +623,12 @@ impl eframe::App for App {
                 self.fill_card(ctx);
                 self.status_bar(ctx);
                 self.settings_screen(ctx);
+            }
+            Screen::Clone => {
+                self.shell(ctx);
+                self.fill_card(ctx);
+                self.status_bar(ctx);
+                self.clone_screen(ctx);
             }
             Screen::Repo => {
                 self.shell(ctx);

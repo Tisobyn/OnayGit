@@ -75,8 +75,7 @@ impl App {
                     self.create_branch = "main".into();
                 }
                 if rail_item_h(ui, "branch", "Clone repository", false, &p, 28.0).clicked() {
-                    self.clone_open = true;
-                    self.clone_dir = None;
+                    self.open_clone();
                 }
                 if rail_item_h(ui, "folder", "Open from disk", false, &p, 28.0).clicked() {
                     open_disk = true;
@@ -210,53 +209,6 @@ impl App {
                     });
                 }
             });
-
-        // Clone dialog
-        if self.clone_open {
-            let mut do_clone = false;
-            let mut pick = false;
-            let mut cancel = false;
-            let close = modal(ctx, &p, "clone_repo", 540.0, Place::Center, "Clone repository", "", |ui| {
-                dialog_field(ui, &p, "Repository URL", &mut self.clone_url, "https://github.com/user/repo.git");
-                if folder_field(ui, &p, "Location", self.clone_dir.as_deref()).clicked() {
-                    pick = true;
-                }
-                ui.add_space(16.0);
-                let w = ui.available_width();
-                ui.allocate_ui_with_layout(egui::vec2(w, 32.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let ok = !self.clone_url.trim().is_empty() && self.clone_dir.is_some() && self.busy.is_none();
-                    if primary_button(ui, "Clone", ok).clicked() {
-                        do_clone = true;
-                    }
-                    if plain_button(ui, &p, "Cancel").clicked() {
-                        cancel = true;
-                    }
-                });
-            });
-            if pick {
-                if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
-                    self.clone_dir = Some(d);
-                }
-            }
-            if close || cancel {
-                self.clone_open = false;
-            }
-            if do_clone {
-                if let Some(parent) = self.clone_dir.clone() {
-                    let url = self.clone_url.trim().to_string();
-                    let name = url
-                        .trim_end_matches('/')
-                        .rsplit(['/', ':'])
-                        .next()
-                        .unwrap_or("repo")
-                        .trim_end_matches(".git")
-                        .to_string();
-                    self.pending_clone = Some(parent.join(name));
-                    self.spawn_in(ctx, parent, "Cloning", &["clone", &url]);
-                    self.clone_open = false;
-                }
-            }
-        }
 
         // Create repository popover
         if self.create_open {

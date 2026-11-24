@@ -111,6 +111,10 @@ impl App {
                 });
                 self.device_waiting = false;
             }
+            (l, r) if l.starts_with(crate::ui::clone::T_REPOS) => {
+                let key = l[crate::ui::clone::T_REPOS.len()..].to_string();
+                self.handle_repos_result(&key, r);
+            }
             (T_DEVICE, Err(e)) => self.status_msg = e.clone(),
             (T_PRS, Ok(tsv)) => {
                 self.prs = tsv.lines().filter_map(git::PullRequest::from_line).collect();
@@ -156,7 +160,7 @@ impl App {
             _ => {}
         }
         if let Err(e) = res {
-            let quiet = label == T_PRS || label == T_SIGN_IN || label == T_DEVICE || label.starts_with(T_CHECK);
+            let quiet = label == T_PRS || label == T_SIGN_IN || label == T_DEVICE || label.starts_with(T_CHECK) || label.starts_with(crate::ui::clone::T_REPOS);
             if !quiet {
                 self.status_msg = format!("{label} failed: {e}");
             }

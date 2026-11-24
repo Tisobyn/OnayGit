@@ -153,9 +153,7 @@ impl App {
                     self.create_anchor = egui::pos2(230.0, 420.0);
                 }
                 Hit::Clone => {
-                    self.screen = Screen::Home;
-                    self.clone_dir = None;
-                    self.clone_open = true;
+                    self.open_clone();
                 }
                 Hit::Disk => {
                     if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {

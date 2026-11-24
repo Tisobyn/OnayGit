@@ -398,3 +398,61 @@ pub fn device_wait(provider: Provider, host: &str, client_id: &str, dc: &DeviceC
     }
     Err("Timed out waiting for the browser".into())
 }
+
+/// A repository the account can reach.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RemoteRepo {
+    pub name: String,
+    pub description: String,
+    pub private: bool,
+    pub url: String,
+}
+
+impl RemoteRepo {
+    pub fn to_line(&self) -> String {
+        let c = |s: &str| s.replace(['\t', '\n'], " ");
+        format!("{}\t{}\t{}\t{}", c(&self.name), self.private, c(&self.url), c(&self.description))
+    }
+
+    pub fn from_line(l: &str) -> Option<RemoteRepo> {
+        let mut p = l.splitn(4, '\t');
+        Some(RemoteRepo { name: p.next()?.to_string(), private: p.next()? == "true", url: p.next()?.to_string(), description: p.next().unwrap_or("").to_string() })
+    }
+}
+
+/// Repositories of the account, most recently active first.
+pub fn list_repos(acc: &Account, token: &str) -> Result<Vec<RemoteRepo>, String> {
+    let mut out = Vec::new();
+    for page in 1..=3 {
+        let path = match acc.provider {
+            Provider::GitHub => format!("/user/repos?per_page=100&sort=pushed&page={page}"),
+            Provider::GitLab => format!("/projects?membership=true&per_page=100&order_by=last_activity_at&page={page}"),
+        };
+        let v = call(acc.provider, &acc.host, token, "GET", &path, None)?;
+        let list = v.as_array().cloned().unwrap_or_default();
+        let n = list.len();
+        for r in list {
+            let repo = match acc.provider {
+                Provider::GitHub => RemoteRepo {
+                    name: r["full_name"].as_str().unwrap_or("").to_string(),
+                    description: r["description"].as_str().unwrap_or("").to_string(),
+                    private: r["private"].as_bool().unwrap_or(false),
+                    url: r["clone_url"].as_str().unwrap_or("").to_string(),
+                },
+                Provider::GitLab => RemoteRepo {
+                    name: r["path_with_namespace"].as_str().unwrap_or("").to_string(),
+                    description: r["description"].as_str().unwrap_or("").to_string(),
+                    private: r["visibility"].as_str() == Some("private"),
+                    url: r["http_url_to_repo"].as_str().unwrap_or("").to_string(),
+                },
+            };
+            if !repo.name.is_empty() && !repo.url.is_empty() {
+                out.push(repo);
+            }
+        }
+        if n < 100 {
+            break;
+        }
+    }
+    Ok(out)
+}
