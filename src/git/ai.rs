@@ -10,6 +10,7 @@ pub const MAX_DIFF: usize = 64 * 1024;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum AiProvider {
+    OpenCode,
     ClaudeCode,
     Codex,
     Custom,
@@ -17,10 +18,11 @@ pub enum AiProvider {
 }
 
 impl AiProvider {
-    pub const ALL: [AiProvider; 4] = [AiProvider::ClaudeCode, AiProvider::Codex, AiProvider::Custom, AiProvider::Api];
+    pub const ALL: [AiProvider; 5] = [AiProvider::OpenCode, AiProvider::ClaudeCode, AiProvider::Codex, AiProvider::Custom, AiProvider::Api];
 
     pub fn key(self) -> &'static str {
         match self {
+            AiProvider::OpenCode => "opencode",
             AiProvider::ClaudeCode => "claude",
             AiProvider::Codex => "codex",
             AiProvider::Custom => "custom",
@@ -30,6 +32,7 @@ impl AiProvider {
 
     pub fn label(self) -> &'static str {
         match self {
+            AiProvider::OpenCode => "OpenCode",
             AiProvider::ClaudeCode => "Claude Code",
             AiProvider::Codex => "Codex",
             AiProvider::Custom => "Custom command",
@@ -54,9 +57,54 @@ pub struct AiConfig {
     pub name: String,
     /// Extra guidance added to the prompt.
     pub instructions: String,
+    /// Model for the command line providers (empty uses the tool default).
+    pub cli_model: String,
+    /// Reasoning effort: "", low, medium or high.
+    pub effort: String,
+    /// OpenCode plan: free, go or zen.
+    pub plan: String,
 }
 
 impl AiConfig {
+    /// Shell command for a command line provider.
+    pub fn cli_command(&self) -> String {
+        let q = |s: &str| format!("'{}'", s.replace('\'', "'\\''"));
+        let m = self.cli_model.trim();
+        let e = self.effort.trim();
+        match self.provider {
+            AiProvider::ClaudeCode => {
+                let mut c = "claude -p".to_string();
+                if !m.is_empty() {
+                    c += &format!(" --model {}", q(m));
+                }
+                if !e.is_empty() {
+                    c += &format!(" --effort {}", q(e));
+                }
+                c + " \"$ONAY_PROMPT\""
+            }
+            AiProvider::Codex => {
+                let mut c = "codex exec".to_string();
+                if !m.is_empty() {
+                    c += &format!(" -m {}", q(m));
+                }
+                if !e.is_empty() {
+                    c += &format!(" -c model_reasoning_effort={}", q(e));
+                }
+                c + " \"$ONAY_PROMPT\""
+            }
+            _ => {
+                let mut c = "opencode run".to_string();
+                if !m.is_empty() {
+                    c += &format!(" -m {}", q(m));
+                }
+                if !e.is_empty() {
+                    c += &format!(" --variant {}", q(e));
+                }
+                c + " \"$ONAY_PROMPT\""
+            }
+        }
+    }
+
     pub fn prompt(&self) -> String {
         if self.instructions.trim().is_empty() {
             PROMPT.to_string()
@@ -75,6 +123,9 @@ impl Default for AiConfig {
             base_url: "https://api.openai.com/v1".into(),
             name: String::new(),
             instructions: String::new(),
+            cli_model: String::new(),
+            effort: String::new(),
+            plan: "free".into(),
         }
     }
 }
@@ -136,8 +187,7 @@ fn run_shell(command: &str, prompt: &str, diff: &str) -> Result<String, String> 
 pub fn generate(cfg: &AiConfig, api_key: Option<&str>, diff: &str) -> Result<(String, String), String> {
     let diff = trim_diff(diff);
     let raw = match cfg.provider {
-        AiProvider::ClaudeCode => run_shell("claude -p \"$ONAY_PROMPT\"", &cfg.prompt(), &diff)?,
-        AiProvider::Codex => run_shell("codex exec \"$ONAY_PROMPT\"", &cfg.prompt(), &diff)?,
+        AiProvider::OpenCode | AiProvider::ClaudeCode | AiProvider::Codex => run_shell(&cfg.cli_command(), &cfg.prompt(), &diff)?,
         AiProvider::Custom => {
             if cfg.command.trim().is_empty() {
                 return Err("Set a command in Settings > AI".into());

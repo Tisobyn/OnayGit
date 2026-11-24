@@ -102,6 +102,9 @@ impl Settings {
                 "ai_model" => s.ai.model = v.to_string(),
                 "tour" => s.tour = v.parse().unwrap_or(0),
                 "tour_skipped" => s.tour_skipped = v == "true",
+                "ai_cli_model" => s.ai.cli_model = v.to_string(),
+                "ai_effort" => s.ai.effort = v.to_string(),
+                "ai_plan" => s.ai.plan = v.to_string(),
                 "ai_added" => s.ai_added = v == "true",
                 "ai_name" => s.ai.name = v.to_string(),
                 "ai_instructions" => s.ai.instructions = v.replace("\\n", "\n"),
@@ -114,7 +117,7 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\ntour={}\ntour_skipped={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\ntips={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\ntour={}\ntour_skipped={}\nai_cli_model={}\nai_effort={}\nai_plan={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
@@ -135,6 +138,9 @@ impl Settings {
             self.ui_font, self.code_font, self.grain, self.grain_pattern, self.grain_strength, self.commit_badges,
             self.tour,
             self.tour_skipped,
+            self.ai.cli_model.replace('\n', " "),
+            self.ai.effort,
+            self.ai.plan,
         );
         let _ = std::fs::write(settings_path(), text);
     }

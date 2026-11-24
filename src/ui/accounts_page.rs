@@ -44,7 +44,7 @@ impl App {
                             let name = if self.settings.ai.name.trim().is_empty() { self.settings.ai.provider.label().to_string() } else { self.settings.ai.name.clone() };
                             ui.label(RichText::new(name).size(13.5).color(p.text));
                             let sub = match self.settings.ai.provider {
-                                git::AiProvider::ClaudeCode | git::AiProvider::Codex => "Local CLI agent \u{b7} Default".to_string(),
+                                git::AiProvider::OpenCode | git::AiProvider::ClaudeCode | git::AiProvider::Codex => "Local CLI agent \u{b7} Default".to_string(),
                                 git::AiProvider::Custom => "Custom command \u{b7} Default".to_string(),
                                 git::AiProvider::Api => format!("{} \u{b7} Default", self.settings.ai.model),
                             };
@@ -81,8 +81,9 @@ impl App {
             ui.label(RichText::new("Provider").size(13.0).color(p.text));
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 10.0;
-                let w = (ui.available_width() - 30.0) / 4.0;
+                let w = (ui.available_width() - 40.0) / 5.0;
                 for (pr, label) in [
+                    (git::AiProvider::OpenCode, "OpenCode"),
                     (git::AiProvider::ClaudeCode, "Claude Code"),
                     (git::AiProvider::Codex, "ChatGPT"),
                     (git::AiProvider::Custom, "Custom"),
@@ -98,8 +99,39 @@ impl App {
             let hint = self.settings.ai.provider.label();
             ui.add(egui::TextEdit::singleline(&mut self.settings.ai.name).hint_text(hint).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
             match self.settings.ai.provider {
-                git::AiProvider::ClaudeCode | git::AiProvider::Codex => {
+                git::AiProvider::OpenCode | git::AiProvider::ClaudeCode | git::AiProvider::Codex => {
+                    let pr = self.settings.ai.provider;
+                    if pr == git::AiProvider::OpenCode {
+                        ui.add_space(4.0);
+                        ui.label(RichText::new("Plan").size(13.0).color(p.text));
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 10.0;
+                            let w = (ui.available_width() - 20.0) / 3.0;
+                            for (key, label) in [("free", "Free"), ("go", "Go"), ("zen", "Zen")] {
+                                if choice_tile(ui, p, "sp_bolt", label, self.settings.ai.plan == key, w).clicked() {
+                                    self.settings.ai.plan = key.to_string();
+                                }
+                            }
+                        });
+                        ui.label(RichText::new(match self.settings.ai.plan.as_str() {
+                            "go" => "Uses your Go subscription. Check OpenCode for usage limits.",
+                            "zen" => "Zen uses your OpenCode balance. Generation may incur charges.",
+                            _ => "Free models may keep prompts or use them for training. Avoid sensitive code.",
+                        }).size(12.0).color(p.muted));
+                    }
                     ui.add_space(4.0);
+                    ui.label(RichText::new("Model").size(13.0).color(p.text));
+                    let hint = if pr == git::AiProvider::OpenCode { "provider/model, or empty for the default" } else { "Default model" };
+                    ui.add(egui::TextEdit::singleline(&mut self.settings.ai.cli_model).hint_text(hint).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+                    ui.label(RichText::new("Effort").size(13.0).color(p.text));
+                    egui::ComboBox::from_id_salt("ai_effort")
+                        .width(180.0)
+                        .selected_text(match self.settings.ai.effort.as_str() { "" => "Default", "low" => "Low", "medium" => "Medium", _ => "High" })
+                        .show_ui(ui, |ui| {
+                            for (k, l) in [("", "Default"), ("low", "Low"), ("medium", "Medium"), ("high", "High")] {
+                                ui.selectable_value(&mut self.settings.ai.effort, k.to_string(), l);
+                            }
+                        });
                     ui.label(RichText::new("Uses the command line tool already installed and signed in on this Mac.").size(12.0).color(p.muted));
                 }
                 git::AiProvider::Custom => {
@@ -175,6 +207,7 @@ impl App {
 
 fn ai_icon(pr: git::AiProvider) -> &'static str {
     match pr {
+        git::AiProvider::OpenCode => "sp_code",
         git::AiProvider::ClaudeCode => "sparkle",
         git::AiProvider::Codex => "chatgpt",
         git::AiProvider::Custom => "terminal",
