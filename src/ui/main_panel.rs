@@ -215,7 +215,7 @@ impl App {
                     }
                 } else if reveal {
                     git::reveal(&path);
-                } else if let Err(e) = git::open_editor(&self.settings.editor, &path) {
+                } else if let Err(e) = git::open_editor(&self.editor_for(&path), &path) {
                     self.status_msg = e;
                 }
             }

@@ -65,6 +65,13 @@ impl App {
                 .show(ctx, |ui| self.account_add_panel(ctx, ui, &p));
         }
         self.space_dialog_ui(ctx);
+        if let (Section::Editor, Some(target)) = (self.section, self.rule_dialog) {
+            egui::SidePanel::right("rule_panel")
+                .exact_width(514.0)
+                .resizable(false)
+                .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
+                .show(ctx, |ui| self.rule_panel(ui, &p, target));
+        }
         if self.section == Section::Git && self.git_editing {
             egui::SidePanel::right("identity_panel")
                 .exact_width(514.0)
@@ -712,20 +719,20 @@ impl App {
     }
 
     fn editor_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
+        use crate::app::editors::{editor_label, installed_editors};
         page_header(ui, p, "External editor", "", |_| {});
-        let known = [("System default", "open", "pencil"), ("VS Code", "code", "terminal"), ("Cursor", "cursor", "terminal"), ("Zed", "zed", "terminal"), ("Sublime Text", "subl", "terminal"), ("Xcode", "open -a Xcode", "terminal")];
+        let mut list = installed_editors();
+        if !list.iter().any(|(_, c, _)| *c == self.settings.editor) {
+            list.push((editor_label(&self.settings.editor), self.settings.editor.clone(), "terminal"));
+        }
         let mut choose: Option<String> = None;
         let mut other = false;
         settings_group(ui, p, "Default editor", "", |_| {}, |ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
-            for (label, cmd, ic) in known {
-                if list_row(ui, p, ic, label, self.settings.editor == cmd, true).clicked() {
-                    choose = Some(cmd.to_string());
+            for (label, cmd, ic) in &list {
+                if list_row(ui, p, ic, label, self.settings.editor == *cmd, true).clicked() {
+                    choose = Some(cmd.clone());
                 }
-            }
-            if !known.iter().any(|(_, c, _)| *c == self.settings.editor) {
-                let label = self.settings.editor.trim_start_matches("open -a ").trim_matches('\'').rsplit('/').next().unwrap_or("").trim_end_matches(".app").to_string();
-                list_row(ui, p, "pencil", &label, true, true);
             }
             if list_row(ui, p, "add", "Other application...", false, false).clicked() {
                 other = true;
@@ -738,6 +745,112 @@ impl App {
         }
         if let Some(c) = choose {
             self.settings.editor = c;
+        }
+        ui.add_space(14.0);
+        let mut add = false;
+        let mut edit: Option<usize> = None;
+        let mut del: Option<usize> = None;
+        settings_group(ui, p, "File type rules", "", |ui| {
+            if ui.add_enabled(self.rule_dialog.is_none(), egui::Button::new("Add rule")).clicked() {
+                add = true;
+            }
+        }, |ui| {
+            if self.editor_rules.is_empty() {
+                group_row(ui, p, |ui| {
+                    ui.label(RichText::new("All files use the default editor.").size(13.0).color(p.muted));
+                });
+            }
+            for (i, r) in self.editor_rules.iter().enumerate() {
+                group_row(ui, p, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(&r.patterns).size(13.5).color(p.text));
+                            ui.label(RichText::new(crate::app::editors::editor_label(&r.editor)).size(12.0).color(p.muted));
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button("Delete").clicked() {
+                                del = Some(i);
+                            }
+                            if ui.button("Edit...").clicked() {
+                                edit = Some(i);
+                            }
+                        });
+                    });
+                });
+            }
+        });
+        if add {
+            self.rule_patterns.clear();
+            self.rule_editor = "open".into();
+            self.rule_dialog = Some(None);
+        }
+        if let Some(i) = edit {
+            self.rule_patterns = self.editor_rules[i].patterns.clone();
+            self.rule_editor = self.editor_rules[i].editor.clone();
+            self.rule_dialog = Some(Some(i));
+        }
+        if let Some(i) = del {
+            self.editor_rules.remove(i);
+            self.save_rules();
+        }
+    }
+
+    /// Right-hand panel to add or edit a file type rule.
+    pub fn rule_panel(&mut self, ui: &mut egui::Ui, p: &Pal, target: Option<usize>) {
+        use crate::app::editors::{editor_label, installed_editors};
+        ui.label(RichText::new(if target.is_some() { "Edit file type default" } else { "Add file type default" }).size(14.0).color(p.text));
+        ui.add_space(14.0);
+        ui.label(RichText::new("File types or names").size(13.0).color(p.text));
+        ui.add(egui::TextEdit::singleline(&mut self.rule_patterns).desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+        ui.add_space(4.0);
+        ui.label(RichText::new(".ts, .tsx, Dockerfile").size(12.5).color(p.muted));
+        ui.add_space(12.0);
+        let mut list = installed_editors();
+        if !list.iter().any(|(_, c, _)| *c == self.rule_editor) {
+            list.push((editor_label(&self.rule_editor), self.rule_editor.clone(), "terminal"));
+        }
+        let mut choose = false;
+        settings_group(ui, p, "Application", "", |ui| {
+            if ui.button("Choose application...").clicked() {
+                choose = true;
+            }
+        }, |ui| {
+            ui.spacing_mut().item_spacing.y = 0.0;
+            for (label, cmd, ic) in &list {
+                if list_row(ui, p, ic, label, self.rule_editor == *cmd, true).clicked() {
+                    self.rule_editor = cmd.clone();
+                }
+            }
+        });
+        if choose {
+            if let Some(app) = rfd::FileDialog::new().set_directory("/Applications").add_filter("Application", &["app"]).pick_file() {
+                self.rule_editor = format!("open -a {}", git::quote(&app.to_string_lossy()));
+            }
+        }
+        let mut save = false;
+        let mut cancel = false;
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+            let w = ui.available_width();
+            ui.allocate_ui_with_layout(egui::vec2(w, 36.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if primary_button(ui, "Save", !self.rule_patterns.trim().is_empty()).clicked() {
+                    save = true;
+                }
+                if plain_button(ui, p, "Cancel").clicked() {
+                    cancel = true;
+                }
+            });
+        });
+        if save {
+            let rule = crate::app::editors::EditorRule { patterns: self.rule_patterns.trim().to_string(), editor: self.rule_editor.clone() };
+            match target {
+                Some(i) if i < self.editor_rules.len() => self.editor_rules[i] = rule,
+                _ => self.editor_rules.push(rule),
+            }
+            self.save_rules();
+            self.rule_dialog = None;
+        }
+        if cancel {
+            self.rule_dialog = None;
         }
     }
 

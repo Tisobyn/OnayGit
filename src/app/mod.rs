@@ -11,6 +11,7 @@ pub mod tabs;
 pub mod tasks;
 mod repos;
 pub mod spaces;
+pub mod editors;
 mod staging;
 
 #[derive(PartialEq, Clone, Copy)]
@@ -181,6 +182,10 @@ pub struct App {
     pub acct_cli: bool,
     pub launcher_msg: String,
     pub keybind_search: String,
+    pub editor_rules: Vec<editors::EditorRule>,
+    pub rule_dialog: Option<Option<usize>>,
+    pub rule_patterns: String,
+    pub rule_editor: String,
     pub git_src: Option<usize>,
     pub fonts_applied: (String, String),
     pub grain_tex: Option<egui::TextureHandle>,
@@ -335,6 +340,10 @@ impl App {
             acct_cli: false,
             launcher_msg: String::new(),
             keybind_search: String::new(),
+            editor_rules: editors::load_rules(),
+            rule_dialog: None,
+            rule_patterns: String::new(),
+            rule_editor: "open".into(),
             git_src: None,
             fonts_applied,
             grain_tex: None,

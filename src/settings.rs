@@ -47,7 +47,7 @@ impl Default for Settings {
             grain_strength: 1,
             commit_badges: true,
             refresh_secs: 3,
-            editor: "code".into(),
+            editor: "open".into(),
             ai: AiConfig::default(),
         }
     }
