@@ -18,7 +18,10 @@ fn main() -> eframe::Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([1100.0, 700.0])
         .with_min_inner_size([800.0, 500.0])
-        .with_title("OnayGit");
+        .with_title("OnayGit")
+        .with_fullsize_content_view(true)
+        .with_title_shown(false)
+        .with_titlebar_shown(false);
     if let Some(icon) = load_icon() {
         viewport = viewport.with_icon(icon);
     }

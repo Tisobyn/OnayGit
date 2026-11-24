@@ -8,6 +8,7 @@ pub const T_PRS: &str = "Pull requests";
 pub const T_NEW_PR: &str = "New pull request";
 pub const T_AI: &str = "AI commit message";
 pub const T_SCAN: &str = "Scan machine:";
+pub const T_INFO: &str = "Repo info";
 pub const T_TEST: &str = "Test machine:";
 
 /// Open a web page in the default browser.
@@ -16,6 +17,28 @@ pub fn open_url(url: &str) {
 }
 
 impl App {
+    /// Refresh branch and change counts of the listed repositories (home screen).
+    pub fn load_repo_info(&mut self, ctx: &egui::Context) {
+        if self.info_at.is_some_and(|t| t.elapsed().as_secs() < 8) || self.task_running(T_INFO) {
+            return;
+        }
+        self.info_at = Some(Instant::now());
+        let repos: Vec<PathBuf> = self.repos.iter().filter(|r| !git::is_remote(r) && r.exists()).cloned().collect();
+        self.spawn_task(ctx, T_INFO, move || {
+            let mut out = vec![];
+            for r in repos {
+                let branch = git::current_branch(&r);
+                let dirty = git::run(&r, &["status", "--porcelain"]).map(|s| s.lines().count()).unwrap_or(0);
+                let (a, b) = match git::ahead_behind(&r) {
+                    Some((a, b)) => (a.to_string(), b.to_string()),
+                    None => ("-".to_string(), "-".to_string()),
+                };
+                out.push(format!("{}\t{branch}\t{dirty}\t{a}\t{b}", r.display()));
+            }
+            Ok(out.join("\n"))
+        });
+    }
+
     pub fn spawn_task(
         &mut self,
         ctx: &egui::Context,
@@ -85,6 +108,18 @@ impl App {
                 let (s, b) = text.split_once('\u{1f}').unwrap_or((text.as_str(), ""));
                 self.summary = s.to_string();
                 self.desc = b.to_string();
+            }
+            (T_INFO, Ok(lines)) => {
+                for l in lines.lines() {
+                    let f: Vec<&str> = l.split('\t').collect();
+                    if f.len() == 5 {
+                        let sync = (f[3] != "-").then(|| (f[3].parse().unwrap_or(0), f[4].parse().unwrap_or(0)));
+                        self.repo_info.insert(
+                            PathBuf::from(f[0]),
+                            RepoInfo { branch: f[1].to_string(), dirty: f[2].parse().unwrap_or(0), sync },
+                        );
+                    }
+                }
             }
             (l, Ok(lines)) if l.starts_with(T_SCAN) => {
                 let host = l[T_SCAN.len()..].to_string();

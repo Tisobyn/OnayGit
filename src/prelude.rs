@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 pub use crate::app::machines::Machine;
+pub use crate::app::RepoInfo;
 pub use crate::app::tabs::{RepoStyle, REPO_ICONS};
 pub use crate::app::tasks::*;
 pub use crate::app::history::{CommitAction, ConflictAct};

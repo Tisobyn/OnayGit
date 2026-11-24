@@ -7,7 +7,7 @@ impl App {
         let mut open: Option<PathBuf> = None;
         let mut remove: Option<usize> = None;
         let mut scan: Option<PathBuf> = None;
-        let mut goto_settings = false;
+        let goto_settings = false;
         let mut create = false;
         let mut open_disk = false;
         let mut del_space: Option<usize> = None;
@@ -15,9 +15,10 @@ impl App {
         let mut toggle: Option<(usize, PathBuf)> = None;
 
         egui::SidePanel::left("home_rail")
-            .exact_width(260.0)
+            .exact_width(330.0)
             .resizable(false)
-            .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(14.0, 22.0)))
+            .show_separator_line(false)
+            .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 46.0, right: 10.0, top: 40.0, bottom: 20.0 }))
             .show(ctx, |ui| {
                 rail_label(ui, "MACHINES", &p);
                 if rail_item(ui, "home", "This Mac", self.selected_machine.is_none(), &p).clicked() {
@@ -55,7 +56,7 @@ impl App {
                     });
                 }
                 ui.horizontal(|ui| {
-                    let w = ui.available_width() - 40.0;
+                    let w = ui.available_width() - 70.0;
                     let r = ui.add(egui::TextEdit::singleline(&mut self.space_name).hint_text("New space").desired_width(w));
                     let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                     if ui.small_button("Add").clicked() || enter {
@@ -78,37 +79,37 @@ impl App {
                         scan = Some(d);
                     }
                 }
-                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                    if rail_item(ui, "settings", "Settings", false, &p).clicked() {
-                        goto_settings = true;
-                    }
-                });
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(30.0, 22.0)))
+            .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 10.0, right: 46.0, top: 40.0, bottom: 20.0 }))
             .show(ctx, |ui| {
                 if let Some(mi) = self.selected_machine {
                     self.machine_view(ctx, ui, mi, &p, &mut open);
                     return;
                 }
+                self.load_repo_info(ctx);
+                ctx.request_repaint_after(Duration::from_secs(2));
                 ui.horizontal(|ui| {
-                    let w = ui.available_width() - 130.0;
+                    let w = ui.available_width() - 90.0;
                     ui.add(
                         egui::TextEdit::singleline(&mut self.search)
                             .hint_text(format!("Search {} repositories", self.repos.len()))
                             .desired_width(w)
-                            .margin(egui::vec2(10.0, 8.0)),
+                            .margin(egui::vec2(12.0, 9.0)),
                     );
-                    ui.selectable_value(&mut self.grid, true, "Grid");
-                    ui.selectable_value(&mut self.grid, false, "List");
+                    for (name, grid) in [("layers", true), ("list", false)] {
+                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), Sense::click());
+                        if self.grid == grid || resp.hovered() {
+                            ui.painter().rect_filled(rect, 8.0, p.hover);
+                        }
+                        paint_icon(ui, name, rect.shrink(8.0), if self.grid == grid { accent() } else { p.muted });
+                        if resp.clicked() {
+                            self.grid = grid;
+                        }
+                    }
                 });
                 ui.add_space(14.0);
-                if rail_item(ui, "add", "Add folder...", false, &p).clicked() {
-                    if let Some(d) = rfd::FileDialog::new().set_directory(home_dir()).pick_folder() {
-                        scan = Some(d);
-                    }
-                }
                 ui.add_space(14.0);
 
                 let q = self.search.to_lowercase();
@@ -134,33 +135,7 @@ impl App {
                     return;
                 }
 
-                // Group header
-                let (rect, resp) =
-                    ui.allocate_exact_size(egui::vec2(ui.available_width(), 52.0), Sense::click());
-                if resp.hovered() {
-                    ui.painter().rect_filled(rect, 6.0, p.hover);
-                }
-                let folder = egui::Rect::from_center_size(rect.min + egui::vec2(28.0, 26.0), egui::vec2(28.0, 28.0));
-                paint_icon(ui, "folder", folder, accent());
-                ui.painter().text(
-                    rect.min + egui::vec2(58.0, 17.0),
-                    Align2::LEFT_CENTER,
-                    "Other repositories",
-                    FontId::proportional(15.0),
-                    p.text,
-                );
-                ui.painter().text(
-                    rect.min + egui::vec2(58.0, 36.0),
-                    Align2::LEFT_CENTER,
-                    format!("{} repositories", shown.len()),
-                    FontId::proportional(12.5),
-                    p.muted,
-                );
-                if resp.clicked() {
-                    self.group_open = !self.group_open;
-                }
-
-                if self.group_open {
+                {
                     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                         if self.grid {
                             ui.horizontal_wrapped(|ui| {
@@ -190,7 +165,7 @@ impl App {
                             });
                         } else {
                             for &i in &shown {
-                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]));
+                                let r = repo_row(ui, &self.repos[i], &p, &self.style_of(&self.repos[i]), self.repo_info.get(&self.repos[i]));
                                 if r.clicked() {
                                     open = Some(self.repos[i].clone());
                                 }

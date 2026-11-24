@@ -12,16 +12,12 @@ impl App {
 
     pub fn settings_screen(&mut self, ctx: &egui::Context) {
         let p = self.pal();
-        let mut back = false;
+        let back = false;
         egui::SidePanel::left("settings_rail")
-            .exact_width(260.0)
+            .exact_width(290.0)
             .resizable(false)
-            .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(14.0, 22.0)))
+            .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 16.0, right: 12.0, top: 24.0, bottom: 16.0 }))
             .show(ctx, |ui| {
-                if rail_item(ui, "arrowLeft", "Back", false, &p).clicked() {
-                    back = true;
-                }
-                ui.add_space(18.0);
                 rail_label(ui, "APPLICATION", &p);
                 for (s, icon, name) in [
                     (Section::Application, "settings", "Application"),
@@ -53,7 +49,7 @@ impl App {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(p.home).inner_margin(egui::Margin::symmetric(40.0, 26.0)))
+            .frame(egui::Frame::none().fill(p.bg).inner_margin(egui::Margin { left: 28.0, right: 40.0, top: 24.0, bottom: 20.0 }))
             .show(ctx, |ui| {
                 ui.set_max_width(640.0);
                 match self.section {

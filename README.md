@@ -69,6 +69,7 @@ src/
     tabs.rs          tab bar and Cmd+T / Cmd+W
     settings_repo.rs Remotes and repository appearance pages
     tips.rs          welcome window and guided tips
+    shell.rs         window frame: title bar tabs, left rail, rounded card
     switcher.rs      Cmd+P repository switcher
     accounts_page.rs Accounts and AI settings pages
     publish.rs       Publish, Pull requests, Add machine, machine view

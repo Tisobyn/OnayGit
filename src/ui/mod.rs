@@ -13,6 +13,7 @@ pub mod settings_repo;
 pub mod sidebar;
 pub mod tabs;
 pub mod publish;
+pub mod shell;
 pub mod stash;
 pub mod switcher;
 pub mod theme;

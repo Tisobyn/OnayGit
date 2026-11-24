@@ -12,7 +12,6 @@ impl App {
         let mut toggle_dir: Option<String> = None;
         let mut ignore: Option<String> = None;
         let mut ask: Option<Confirm> = None;
-        let mut new_tab = self.tab;
 
         egui::SidePanel::left("sidebar")
             .resizable(true)
@@ -20,39 +19,38 @@ impl App {
             .width_range(240.0..=520.0)
             .frame(egui::Frame::none().fill(p.sidebar))
             .show(ctx, |ui| {
-                // Tabs
+                // Header
+                let mut do_refresh = false;
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    let w = ui.available_width() / 2.0;
-                    for (t, label) in [
-                        (Tab::Changes, format!("Changes  {}", self.files.len())),
-                        (Tab::History, "History".to_string()),
-                    ] {
-                        let (rect, resp) = ui.allocate_exact_size(egui::vec2(w, 28.0), Sense::click());
-                        let active = self.tab == t;
-                        if resp.hovered() {
-                            ui.painter().rect_filled(rect, 0.0, p.hover);
+                    ui.add_space(8.0);
+                    let title = match self.tab {
+                        Tab::Changes => "Changes",
+                        Tab::History => "History",
+                    };
+                    ui.label(RichText::new(title).size(14.5).color(p.text));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add_space(6.0);
+                        for (name, tip) in [("sync", "Refresh"), ("list", "Group by folder")] {
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
+                            let on = name == "list" && self.tree_view && self.tab == Tab::Changes;
+                            if on || resp.hovered() {
+                                ui.painter().rect_filled(rect, 6.0, p.hover);
+                            }
+                            paint_icon(ui, name, rect.shrink(6.0), if on { accent() } else { p.muted });
+                            if resp.on_hover_text(tip).clicked() {
+                                if name == "sync" {
+                                    do_refresh = true;
+                                } else {
+                                    self.tree_view = !self.tree_view;
+                                }
+                            }
                         }
-                        ui.painter().text(
-                            rect.center(),
-                            Align2::CENTER_CENTER,
-                            label,
-                            FontId::proportional(13.0),
-                            if active { p.text } else { p.muted },
-                        );
-                        if active {
-                            let line = egui::Rect::from_min_size(
-                                egui::pos2(rect.min.x, rect.max.y - 2.0),
-                                egui::vec2(rect.width(), 2.0),
-                            );
-                            ui.painter().rect_filled(line, 0.0, accent());
-                        }
-                        if resp.clicked() {
-                            new_tab = t;
-                        }
-                    }
+                    });
                 });
-                ui.separator();
+                if do_refresh {
+                    self.refresh();
+                }
+                ui.add_space(2.0);
 
                 match self.tab {
                     Tab::Changes => {
@@ -155,9 +153,6 @@ impl App {
                             }
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 ui.add_space(6.0);
-                                if ui.selectable_label(self.tree_view, "Tree").on_hover_text("Group files by folder").clicked() {
-                                    self.tree_view = !self.tree_view;
-                                }
                                 let has = !self.files.is_empty();
                                 if ui.add_enabled(has, egui::Button::new("Stash").small()).clicked() {
                                     do_stash = true;
@@ -316,7 +311,6 @@ impl App {
                 }
             });
 
-        self.tab = new_tab;
         if let Some(d) = toggle_dir {
             if !self.collapsed.remove(&d) {
                 self.collapsed.insert(d);

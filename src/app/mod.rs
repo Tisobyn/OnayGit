@@ -69,6 +69,15 @@ pub enum Dialog {
     AddMachine,
 }
 
+/// Short status of a repository, shown on the home screen.
+#[derive(Clone, Debug)]
+pub struct RepoInfo {
+    pub branch: String,
+    pub dirty: usize,
+    /// (ahead, behind); None when there is no upstream.
+    pub sync: Option<(u32, u32)>,
+}
+
 pub type Done = (String, Result<String, String>);
 
 pub struct App {
@@ -80,7 +89,6 @@ pub struct App {
     // home
     pub search: String,
     pub grid: bool,
-    pub group_open: bool,
     pub clone_open: bool,
     pub clone_url: String,
     pub pending_clone: Option<PathBuf>,
@@ -147,6 +155,9 @@ pub struct App {
     pub tip: usize,
     pub tasks: HashSet<String>,
     pub tree_view: bool,
+    pub repo_info: HashMap<PathBuf, RepoInfo>,
+    pub info_at: Option<Instant>,
+    pub card_rect: egui::Rect,
     pub spaces: Vec<spaces::Space>,
     pub selected_space: Option<usize>,
     pub space_name: String,
@@ -206,7 +217,6 @@ impl App {
             repos,
             search: String::new(),
             grid: false,
-            group_open: true,
             clone_open: false,
             clone_url: String::new(),
             pending_clone: None,
@@ -269,6 +279,9 @@ impl App {
             tip: 0,
             tasks: HashSet::new(),
             tree_view: false,
+            repo_info: HashMap::new(),
+            info_at: None,
+            card_rect: egui::Rect::NOTHING,
             spaces: spaces::load_spaces(),
             selected_space: None,
             space_name: String::new(),
@@ -316,6 +329,12 @@ impl App {
             }
         }
         app.refresh();
+        // Handy for screenshots: ONAYGIT_SCREEN=home|settings
+        match std::env::var("ONAYGIT_SCREEN").as_deref() {
+            Ok("home") => app.screen = Screen::Home,
+            Ok("settings") => app.open_settings(),
+            _ => {}
+        }
         app
     }
 
@@ -330,7 +349,7 @@ impl App {
 
 impl eframe::App for App {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        let c = pal(self.settings.theme).bg;
+        let c = pal(self.settings.theme).chrome;
         c.to_normalized_gamma_f32()
     }
 
@@ -382,22 +401,28 @@ impl eframe::App for App {
         self.tab_shortcuts(ctx);
         match self.screen {
             Screen::Home => {
-                self.tab_bar(ctx);
+                self.shell(ctx);
+                self.fill_card(ctx);
                 self.status_bar(ctx);
                 self.home(ctx);
             }
             Screen::Settings => {
+                self.shell(ctx);
+                self.fill_card(ctx);
                 self.status_bar(ctx);
                 self.settings_screen(ctx);
             }
             Screen::Repo => {
-                self.tab_bar(ctx);
+                self.shell(ctx);
+                self.fill_card(ctx);
                 self.toolbar(ctx);
                 self.status_bar(ctx);
                 self.sidebar(ctx);
                 self.main_panel(ctx);
             }
         }
+
+        self.paint_corners(ctx);
 
         if self.settings != before {
             self.settings.save();
