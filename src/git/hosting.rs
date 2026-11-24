@@ -45,6 +45,8 @@ pub struct Account {
     pub provider: Provider,
     pub host: String,
     pub user: String,
+    /// Signed in through the GitHub CLI.
+    pub cli: bool,
 }
 
 impl Account {
@@ -330,4 +332,69 @@ mod tests {
         assert_eq!(headers(Provider::GitLab, "t"), vec!["PRIVATE-TOKEN: t".to_string()]);
         assert_eq!(encode_slug("a/b/c"), "a%2Fb%2Fc");
     }
+}
+
+/// A pending browser sign-in: the code to enter on the host's device page.
+#[derive(Clone, Debug)]
+pub struct DeviceCode {
+    pub device_code: String,
+    pub user_code: String,
+    pub uri: String,
+    pub interval: u64,
+}
+
+fn device_urls(provider: Provider, host: &str) -> (String, String) {
+    match provider {
+        Provider::GitHub => (format!("https://{host}/login/device/code"), format!("https://{host}/login/oauth/access_token")),
+        Provider::GitLab => (format!("https://{host}/oauth/authorize_device"), format!("https://{host}/oauth/token")),
+    }
+}
+
+/// Start the OAuth device flow with the app's public client ID.
+pub fn device_start(provider: Provider, host: &str, client_id: &str, private: bool) -> Result<DeviceCode, String> {
+    let (start, _) = device_urls(provider, host);
+    let scope = match (provider, private) {
+        (Provider::GitHub, false) => "read:user",
+        (Provider::GitHub, true) => "repo read:user",
+        (Provider::GitLab, false) => "read_user",
+        (Provider::GitLab, true) => "read_api read_user write_repository",
+    };
+    let body = format!("client_id={client_id}&scope={}", scope.replace(' ', "%20"));
+    let (code, text) = http("POST", &start, &["Accept: application/json".to_string()], Some(&body))?;
+    let v: Value = serde_json::from_str(&text).map_err(|_| format!("Unexpected answer ({code})"))?;
+    if let Some(e) = v["error_description"].as_str().or(v["error"].as_str()) {
+        return Err(e.to_string());
+    }
+    Ok(DeviceCode {
+        device_code: v["device_code"].as_str().ok_or("No device code returned")?.to_string(),
+        user_code: v["user_code"].as_str().unwrap_or_default().to_string(),
+        uri: v["verification_uri"].as_str().unwrap_or_default().to_string(),
+        interval: v["interval"].as_u64().unwrap_or(5).max(1),
+    })
+}
+
+/// Wait until the user approves the code in the browser, then return the access token.
+pub fn device_wait(provider: Provider, host: &str, client_id: &str, dc: &DeviceCode) -> Result<String, String> {
+    let (_, token_url) = device_urls(provider, host);
+    let mut interval = dc.interval;
+    let body = format!(
+        "client_id={client_id}&device_code={}&grant_type=urn:ietf:params:oauth:grant-type:device_code",
+        dc.device_code
+    );
+    for _ in 0..180 {
+        std::thread::sleep(std::time::Duration::from_secs(interval));
+        let (_, text) = http("POST", &token_url, &["Accept: application/json".to_string()], Some(&body))?;
+        let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+        if let Some(t) = v["access_token"].as_str() {
+            return Ok(t.to_string());
+        }
+        match v["error"].as_str() {
+            Some("authorization_pending") | None => {}
+            Some("slow_down") => interval += 5,
+            Some("access_denied") => return Err("Sign-in was cancelled in the browser".into()),
+            Some("expired_token") => return Err("The code expired. Try again.".into()),
+            Some(e) => return Err(v["error_description"].as_str().unwrap_or(e).to_string()),
+        }
+    }
+    Err("Timed out waiting for the browser".into())
 }

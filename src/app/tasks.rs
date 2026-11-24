@@ -3,6 +3,8 @@
 use crate::prelude::*;
 
 pub const T_SIGN_IN: &str = "Sign in";
+pub const T_DEVICE: &str = "Device code";
+pub const T_CHECK: &str = "Check account:";
 pub const T_PUBLISH: &str = "Publish repository";
 pub const T_PRS: &str = "Pull requests";
 pub const T_NEW_PR: &str = "New pull request";
@@ -87,7 +89,29 @@ impl App {
         }
         match (label, res) {
             (T_SIGN_IN, Ok(user)) => self.finish_sign_in(user),
-            (T_SIGN_IN, Err(_)) => self.pending_account = None,
+            (T_SIGN_IN, Err(e)) => {
+                self.pending_account = None;
+                self.device = None;
+                self.device_waiting = false;
+                if self.acct_adding {
+                    self.status_msg = e.clone();
+                }
+            }
+            (l, r) if l.starts_with(T_CHECK) => {
+                let key = l[T_CHECK.len()..].to_string();
+                self.acct_status.insert(key, match r { Ok(s) => s.clone(), Err(e) => format!("Failed: {}", e.chars().take(40).collect::<String>()) });
+            }
+            (T_DEVICE, Ok(s)) => {
+                let mut p = s.split('\u{1f}');
+                self.device = Some(git::DeviceCode {
+                    device_code: p.next().unwrap_or_default().to_string(),
+                    user_code: p.next().unwrap_or_default().to_string(),
+                    uri: p.next().unwrap_or_default().to_string(),
+                    interval: p.next().and_then(|v| v.parse().ok()).unwrap_or(5),
+                });
+                self.device_waiting = false;
+            }
+            (T_DEVICE, Err(e)) => self.status_msg = e.clone(),
             (T_PRS, Ok(tsv)) => {
                 self.prs = tsv.lines().filter_map(git::PullRequest::from_line).collect();
                 self.pr_error.clear();
@@ -132,7 +156,8 @@ impl App {
             _ => {}
         }
         if let Err(e) = res {
-            if label != T_PRS {
+            let quiet = label == T_PRS || label == T_SIGN_IN || label == T_DEVICE || label.starts_with(T_CHECK);
+            if !quiet {
                 self.status_msg = format!("{label} failed: {e}");
             }
             if label.starts_with(T_TEST) {

@@ -168,6 +168,16 @@ pub struct App {
     pub tree_view: bool,
     pub system_dark: bool,
     pub acct_adding: bool,
+    /// 0 browser, 1 access token, 2 GitHub CLI.
+    pub acct_method: usize,
+    pub acct_client_id: String,
+    pub acct_private: bool,
+    pub acct_advanced: bool,
+    pub device: Option<git::DeviceCode>,
+    pub device_waiting: bool,
+    pub pending_cli: bool,
+    pub cli_checked: bool,
+    pub acct_status: HashMap<String, String>,
     pub acct_cli: bool,
     pub launcher_msg: String,
     pub keybind_search: String,
@@ -352,6 +362,15 @@ impl App {
             acct_host: String::new(),
             acct_token: String::new(),
             pending_account: None,
+            acct_method: 0,
+            acct_client_id: String::new(),
+            acct_private: false,
+            acct_advanced: false,
+            device: None,
+            device_waiting: false,
+            pending_cli: false,
+            cli_checked: false,
+            acct_status: HashMap::new(),
             publish_account: 0,
             publish_name: String::new(),
             publish_private: true,
@@ -411,6 +430,10 @@ impl App {
                     "keybinds" => Section::Keybinds,
                     "privacy" => Section::Privacy,
                     "accounts" => Section::Accounts,
+                    "accountadd" => {
+                        app.acct_adding = true;
+                        Section::Accounts
+                    }
                     "git" => Section::Git,
                     "editor" => Section::Editor,
                     "ai" => Section::Ai,
@@ -520,6 +543,10 @@ impl eframe::App for App {
             }
         });
 
+        if !self.cli_checked {
+            self.cli_checked = true;
+            self.auto_add_cli(ctx);
+        }
         while let Ok((label, res)) = self.rx.try_recv() {
             if self.handle_task_result(&label, &res) {
                 continue;

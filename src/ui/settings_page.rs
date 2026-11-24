@@ -59,9 +59,9 @@ impl App {
         let adding = self.section == Section::Accounts && self.acct_adding;
         if adding {
             egui::SidePanel::right("account_add")
-                .exact_width(330.0)
+                .exact_width(514.0)
                 .resizable(false)
-                .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(18.0)))
+                .frame(egui::Frame::none().fill(p.bg).stroke(egui::Stroke::new(1.0_f32, p.border)).inner_margin(egui::Margin::same(20.0)))
                 .show(ctx, |ui| self.account_add_panel(ctx, ui, &p));
         }
         self.space_dialog_ui(ctx);
@@ -754,6 +754,8 @@ impl App {
             self.acct_adding = true;
         }
         let mut out: Option<usize> = None;
+        let mut edit: Option<usize> = None;
+        let mut check: Option<usize> = None;
         let count = format!("{} account{}", self.accounts.len(), if self.accounts.len() == 1 { "" } else { "s" });
         settings_group(ui, p, "Connected accounts", &count, |_| {}, |ui| {
             if self.accounts.is_empty() {
@@ -767,13 +769,25 @@ impl App {
                         icon(ui, if a.provider == git::Provider::GitHub { "github" } else { "gitlab" }, 18.0, p.text);
                         ui.vertical(|ui| {
                             ui.label(RichText::new(&a.user).color(p.text));
-                            ui.label(RichText::new(format!("{} \u{b7} Connected", a.host)).size(12.0).color(p.muted));
+                            let via = if a.cli { "GitHub CLI" } else { "Access token" };
+                            let st = self.acct_status.get(&a.secret_name()).map(String::as_str).unwrap_or("Not checked");
+                            ui.label(RichText::new(format!("{} \u{b7} {via} \u{b7} {st}", a.host)).size(12.0).color(p.muted));
                         });
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), Sense::click());
-                            paint_icon(ui, "remove", rect.shrink(3.0), Color32::from_rgb(220, 90, 90));
-                            if resp.on_hover_text("Sign out").clicked() {
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), Sense::click());
+                            paint_icon(ui, "remove", rect.shrink(4.0), Color32::from_rgb(220, 90, 90));
+                            if resp.on_hover_text("Remove account").clicked() {
                                 out = Some(i);
+                            }
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), Sense::click());
+                            paint_icon(ui, "pencil", rect.shrink(4.0), p.muted);
+                            if resp.on_hover_text("Reconnect").clicked() {
+                                edit = Some(i);
+                            }
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), Sense::click());
+                            paint_icon(ui, "sync", rect.shrink(4.0), p.muted);
+                            if resp.on_hover_text("Check connection").clicked() {
+                                check = Some(i);
                             }
                         });
                     });
@@ -783,66 +797,206 @@ impl App {
         if let Some(i) = out {
             self.sign_out(i);
         }
+        if let Some(i) = edit {
+            if let Some(a) = self.accounts.get(i) {
+                self.acct_provider = a.provider;
+                self.acct_host = if a.host == a.provider.default_host() { String::new() } else { a.host.clone() };
+                self.acct_method = if a.cli { 2 } else { 1 };
+            }
+            self.acct_adding = true;
+        }
+        if let Some(i) = check {
+            if let Some(a) = self.accounts.get(i).cloned() {
+                self.acct_status.insert(a.secret_name(), "Checking...".into());
+                let ctx = ui.ctx().clone();
+                let label = format!("{T_CHECK}{}", a.secret_name());
+                self.spawn_task(&ctx, &label, move || {
+                    let token = a.token().ok_or("Token missing")?;
+                    git::whoami(a.provider, &a.host, &token).map(|_| "Connected".to_string())
+                });
+            }
+        }
     }
 
     fn account_add_panel(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, p: &Pal) {
-        ui.label(RichText::new("Add account").size(16.0).color(p.text));
-        ui.label(RichText::new("Tokens are kept in the macOS Keychain.").size(12.5).color(p.muted));
-        ui.add_space(12.0);
-        field_label(ui, p, "Provider");
-        ui.horizontal(|ui| {
-            for pr in [git::Provider::GitHub, git::Provider::GitLab] {
-                let icon = if pr == git::Provider::GitHub { "github" } else { "gitlab" };
-                if choice_tile(ui, p, icon, pr.label(), self.acct_provider == pr, 140.0).clicked() {
-                    self.acct_provider = pr;
-                    self.acct_host.clear();
-                    if pr != git::Provider::GitHub {
-                        self.acct_cli = false;
+        let gh = self.acct_provider == git::Provider::GitHub;
+        if !gh && self.acct_method == 2 {
+            self.acct_method = 0;
+        }
+        let provider_label = self.acct_provider.label();
+        ui.label(RichText::new("Add account").size(14.0).color(p.text));
+        ui.label(RichText::new("Git credentials stay separate.").size(12.5).color(p.muted));
+        ui.add_space(8.0);
+        let footer_h = 58.0;
+        let busy = self.task_running(T_SIGN_IN) || self.task_running(T_DEVICE);
+        egui::ScrollArea::vertical().auto_shrink([false, false]).max_height(ui.available_height() - footer_h).show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = 6.0;
+            let tile_w = (ui.available_width() - 20.0) / 3.0;
+            ui.label(RichText::new("Provider").size(13.0).color(p.text));
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 10.0;
+                for (icon_name, label, which) in [("github", "GitHub", 0), ("gitlab", "GitLab", 1), ("help", "Other...", 2)] {
+                    let on = match which {
+                        0 => gh && !self.acct_advanced,
+                        1 => !gh,
+                        _ => gh && self.acct_advanced,
+                    };
+                    if choice_tile(ui, p, icon_name, label, on, tile_w).clicked() {
+                        self.acct_provider = if which == 1 { git::Provider::GitLab } else { git::Provider::GitHub };
+                        self.acct_advanced = which == 2;
+                        self.acct_host.clear();
+                        self.device = None;
                     }
                 }
-            }
-        });
-        ui.add_space(8.0);
-        if self.acct_provider == git::Provider::GitHub {
-            field_label(ui, p, "Connect with");
+            });
+            ui.add_space(6.0);
+            ui.label(RichText::new("Connect with").size(13.0).color(p.text));
             ui.horizontal(|ui| {
-                if choice_tile(ui, p, "key", "Access token", !self.acct_cli, 140.0).clicked() {
-                    self.acct_cli = false;
+                ui.spacing_mut().item_spacing.x = 10.0;
+                let n = if gh { 3.0 } else { 2.0 };
+                let w = (ui.available_width() - 10.0 * (n - 1.0)) / n;
+                if choice_tile(ui, p, "browser", "Browser", self.acct_method == 0, w).clicked() {
+                    self.acct_method = 0;
                 }
-                if choice_tile(ui, p, "terminal", "GitHub CLI", self.acct_cli, 140.0).clicked() {
-                    self.acct_cli = true;
+                if choice_tile(ui, p, "key", "Access token", self.acct_method == 1, w).clicked() {
+                    self.acct_method = 1;
+                }
+                if gh && choice_tile(ui, p, "github", "GitHub CLI", self.acct_method == 2, w).clicked() {
+                    self.acct_method = 2;
                 }
             });
             ui.add_space(8.0);
-        }
-        field_label(ui, p, "Host");
-        ui.add(egui::TextEdit::singleline(&mut self.acct_host).hint_text(self.acct_provider.default_host()).desired_width(f32::INFINITY));
-        if !self.acct_cli {
-            field_label(ui, p, "Access token");
-            ui.add(egui::TextEdit::singleline(&mut self.acct_token).password(true).desired_width(f32::INFINITY));
-        } else {
-            ui.add_space(6.0);
-            ui.label(RichText::new("Uses the token from gh auth login.").size(12.0).color(p.muted));
-        }
-        if !self.status_msg.is_empty() {
-            ui.add_space(6.0);
-            ui.label(RichText::new(&self.status_msg).size(12.0).color(p.muted));
-        }
-        ui.add_space(12.0);
-        let busy = self.task_running(T_SIGN_IN);
-        ui.horizontal(|ui| {
-            if ui.button("Cancel").clicked() {
-                self.acct_adding = false;
-                self.acct_token.clear();
+            let settings_url = if gh { "https://github.com/settings/developers" } else { "https://gitlab.com/-/user_settings/applications" };
+            let token_url = if gh { "https://github.com/settings/personal-access-tokens/new" } else { "https://gitlab.com/-/user_settings/personal_access_tokens" };
+            match self.acct_method {
+                0 => {
+                    if let Some(d) = self.device.clone() {
+                        ui.label(RichText::new("Approve in your browser").size(13.0).color(p.text));
+                        ui.label(RichText::new("Enter this code on the page that just opened.").size(12.0).color(p.muted));
+                        ui.add_space(6.0);
+                        egui::Frame::none().fill(p.hover).rounding(8.0).inner_margin(egui::Margin::same(14.0)).show(ui, |ui| {
+                            ui.set_width(ui.available_width());
+                            ui.label(RichText::new(&d.user_code).size(24.0).monospace().color(p.text));
+                            ui.label(RichText::new(&d.uri).size(12.0).color(p.muted));
+                        });
+                        ui.horizontal(|ui| {
+                            if ui.button("Copy code").clicked() {
+                                ui.ctx().copy_text(d.user_code.clone());
+                            }
+                            if ui.button("Open page").clicked() {
+                                open_url(&d.uri);
+                            }
+                            ui.spinner();
+                            ui.label(RichText::new("Waiting for approval...").size(12.0).color(p.muted));
+                        });
+                    } else {
+                        ui.horizontal(|ui| {
+                            ui.vertical(|ui| {
+                                ui.label(RichText::new("Application setup").size(13.0).color(p.text));
+                                ui.label(RichText::new("Register an OAuth app using these values.").size(12.0).color(p.muted));
+                            });
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button(format!("Open {provider_label} settings")).clicked() {
+                                    open_url(settings_url);
+                                }
+                            });
+                        });
+                        copy_field(ui, p, "Application name", "OnayGit");
+                        copy_field(ui, p, "Homepage URL", "https://github.com/Tisobyn/OnayGit");
+                        copy_field(ui, p, "Callback URL", "http://127.0.0.1:8765/oauth/callback");
+                        ui.label(RichText::new(if gh { "Enable Device Flow, then register the application." } else { "Enable the device flow scope, then save the application." }).size(12.0).color(p.muted));
+                        ui.add_space(6.0);
+                        ui.label(RichText::new("Client ID").size(13.0).color(p.text));
+                        ui.add(egui::TextEdit::singleline(&mut self.acct_client_id).hint_text("Client ID").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+                        ui.label(RichText::new("Use the public ID, not the client secret.").size(12.0).color(p.muted));
+                    }
+                }
+                1 => {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new("Token setup").size(13.0).color(p.text));
+                            ui.label(RichText::new("Create a token using the details below.").size(12.0).color(p.muted));
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.button(format!("Open {provider_label} settings")).clicked() {
+                                open_url(token_url);
+                            }
+                        });
+                    });
+                    copy_field(ui, p, "Token name", "OnayGit");
+                    ui.label(
+                        RichText::new(if gh {
+                            "Use a fine-grained token with an expiry date. Keep repository access public-only; no extra permissions are needed for account connection."
+                        } else {
+                            "Choose an expiry date and select only read_user, then create the token."
+                        })
+                        .size(12.0)
+                        .color(p.muted),
+                    );
+                    ui.add_space(6.0);
+                    ui.label(RichText::new("Access token").size(13.0).color(p.text));
+                    ui.add(egui::TextEdit::singleline(&mut self.acct_token).password(true).hint_text("Paste an access token").desired_width(f32::INFINITY).margin(egui::vec2(10.0, 8.0)));
+                    ui.label(RichText::new("Stored securely in macOS Keychain.").size(12.0).color(p.muted));
+                }
+                _ => {
+                    ui.label(RichText::new("Uses the token from gh auth login.").size(12.5).color(p.muted));
+                }
             }
-            let ready = self.acct_cli || !self.acct_token.trim().is_empty();
-            if ui.add_enabled(!busy && ready, egui::Button::new("Connect")).clicked() {
-                self.sign_in(ctx);
+            if self.acct_method != 2 && self.device.is_none() {
+                ui.add_space(8.0);
+                ui.label(RichText::new("Repository access").size(13.0).color(p.text));
+                ui.checkbox(&mut self.acct_private, "Browse and clone private repositories");
+                ui.label(RichText::new("Profile-only sign-in. GitHub can list public repositories; GitLab repository browsing needs read_api.").size(12.0).color(p.muted));
             }
-            if busy {
-                ui.spinner();
+            ui.add_space(4.0);
+            let open = self.acct_advanced || !self.acct_host.is_empty();
+            egui::CollapsingHeader::new("Advanced").default_open(open).show(ui, |ui| {
+                ui.label(RichText::new("Host").size(12.5).color(p.text));
+                ui.add(egui::TextEdit::singleline(&mut self.acct_host).hint_text(self.acct_provider.default_host()).desired_width(f32::INFINITY));
+                ui.label(RichText::new("Change this for GitHub Enterprise or a self-hosted GitLab.").size(12.0).color(p.muted));
+            });
+            if !self.status_msg.is_empty() {
+                ui.add_space(6.0);
+                ui.label(RichText::new(&self.status_msg).size(12.5).color(Color32::from_rgb(235, 110, 100)));
             }
         });
+        let mut cancel = false;
+        let mut go = false;
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+            let w = ui.available_width();
+            ui.allocate_ui_with_layout(egui::vec2(w, 36.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let (label, ready) = match self.acct_method {
+                    0 => ("Sign in with browser", !self.acct_client_id.trim().is_empty() && self.device.is_none()),
+                    1 => ("Connect", !self.acct_token.trim().is_empty()),
+                    _ => ("Connect", true),
+                };
+                if primary_button(ui, label, ready && !busy).clicked() {
+                    go = true;
+                }
+                if plain_button(ui, p, "Cancel").clicked() {
+                    cancel = true;
+                }
+            });
+        });
+        if go {
+            self.status_msg.clear();
+            if self.acct_method == 0 {
+                self.browser_sign_in(ctx);
+            } else {
+                self.acct_cli = self.acct_method == 2;
+                self.sign_in(ctx);
+            }
+        }
+        if self.device.is_some() && !self.device_waiting {
+            self.wait_for_browser(ctx);
+        }
+        if cancel {
+            self.acct_adding = false;
+            self.acct_token.clear();
+            self.device = None;
+            self.device_waiting = false;
+            self.status_msg.clear();
+        }
     }
 
     fn help_page(&mut self, ui: &mut egui::Ui, p: &Pal) {
@@ -1054,4 +1208,21 @@ pub fn space_color32(c: Option<usize>) -> Color32 {
         Some((_, rgb)) => Color32::from_rgb(rgb[0], rgb[1], rgb[2]),
         None => Color32::from_rgb(160, 165, 175),
     }
+}
+
+/// Read-only value with a Copy button, for setup values the user pastes elsewhere.
+fn copy_field(ui: &mut egui::Ui, p: &Pal, label: &str, value: &str) {
+    ui.add_space(2.0);
+    ui.label(RichText::new(label).size(13.0).color(p.text));
+    egui::Frame::none().stroke(egui::Stroke::new(1.0_f32, p.border)).rounding(6.0).inner_margin(egui::Margin::symmetric(10.0, 8.0)).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(value).size(13.0).color(p.text));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.add(egui::Button::new(RichText::new("Copy").size(12.5).color(p.text)).frame(false)).clicked() {
+                    ui.ctx().copy_text(value.to_string());
+                }
+            });
+        });
+    });
 }

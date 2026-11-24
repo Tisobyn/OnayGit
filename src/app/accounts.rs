@@ -16,6 +16,7 @@ pub fn load_accounts() -> Vec<git::Account> {
                 provider: git::Provider::from_key(p.next()?)?,
                 host: p.next()?.to_string(),
                 user: p.next()?.to_string(),
+                cli: p.next() == Some("cli"),
             })
         })
         .collect()
@@ -26,7 +27,7 @@ impl App {
         let text: Vec<String> = self
             .accounts
             .iter()
-            .map(|a| format!("{}\t{}\t{}", a.provider.key(), a.host, a.user))
+            .map(|a| format!("{}\t{}\t{}\t{}", a.provider.key(), a.host, a.user, if a.cli { "cli" } else { "" }))
             .collect();
         let _ = std::fs::write(accounts_path(), text.join("\n"));
     }
@@ -45,6 +46,7 @@ impl App {
             return;
         }
         self.pending_account = Some((provider, host.clone(), token.clone()));
+        self.pending_cli = cli;
         self.spawn_task(ctx, T_SIGN_IN, move || {
             let token = if cli { git::gh_cli_token(&host)? } else { token };
             let user = git::whoami(provider, &host, &token)?;
@@ -58,7 +60,7 @@ impl App {
             Some((u, t)) => (u, t.to_string()),
             None => (result, token),
         };
-        let acc = git::Account { provider, host, user: user.to_string() };
+        let acc = git::Account { provider, host, user: user.to_string(), cli: self.pending_cli };
         match git::secret_set(&acc.secret_name(), &token) {
             Ok(()) => {
                 self.accounts.retain(|a| a.secret_name() != acc.secret_name());
@@ -70,6 +72,54 @@ impl App {
             }
             Err(e) => self.status_msg = format!("Could not save the token in the Keychain: {e}"),
         }
+    }
+
+    /// Pick up an existing GitHub CLI login once at start-up.
+    pub fn auto_add_cli(&mut self, ctx: &egui::Context) {
+        if self.accounts.iter().any(|a| a.provider == git::Provider::GitHub && a.host == "github.com") {
+            return;
+        }
+        self.acct_provider = git::Provider::GitHub;
+        self.acct_host.clear();
+        self.acct_cli = true;
+        self.sign_in(ctx);
+        self.acct_cli = false;
+    }
+
+    /// Browser sign-in: ask for a device code, then open the host's page.
+    pub fn browser_sign_in(&mut self, ctx: &egui::Context) {
+        let provider = self.acct_provider;
+        let host = if self.acct_host.trim().is_empty() { provider.default_host().to_string() } else { self.acct_host.trim().to_string() };
+        let client = self.acct_client_id.trim().to_string();
+        let private = self.acct_private;
+        if client.is_empty() {
+            return;
+        }
+        self.status_msg.clear();
+        self.spawn_task(ctx, T_DEVICE, move || {
+            let d = git::device_start(provider, &host, &client, private)?;
+            Ok(format!("{}\u{1f}{}\u{1f}{}\u{1f}{}", d.device_code, d.user_code, d.uri, d.interval))
+        });
+    }
+
+    /// Called once the device code arrived: show it, open the browser and wait for approval.
+    pub fn wait_for_browser(&mut self, ctx: &egui::Context) {
+        let Some(d) = self.device.clone() else { return };
+        if self.device_waiting {
+            return;
+        }
+        self.device_waiting = true;
+        open_url(&d.uri);
+        let provider = self.acct_provider;
+        let host = if self.acct_host.trim().is_empty() { provider.default_host().to_string() } else { self.acct_host.trim().to_string() };
+        let client = self.acct_client_id.trim().to_string();
+        self.pending_account = Some((provider, host.clone(), String::new()));
+        self.pending_cli = false;
+        self.spawn_task(ctx, T_SIGN_IN, move || {
+            let token = git::device_wait(provider, &host, &client, &d)?;
+            let user = git::whoami(provider, &host, &token)?;
+            Ok(format!("{user}\u{1f}{token}"))
+        });
     }
 
     pub fn sign_out(&mut self, i: usize) {
