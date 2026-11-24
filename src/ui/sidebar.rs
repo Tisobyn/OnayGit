@@ -8,11 +8,8 @@ impl App {
         let mut do_commit = false;
         let mut do_undo = false;
         let mut do_stash = false;
-        let mut tag_here: Option<String> = None;
-        let mut new_compare: Option<Option<String>> = None;
         let mut ignore: Option<String> = None;
         let mut ask: Option<Confirm> = None;
-        let mut pick_commit: Option<String> = None;
         let mut new_tab = self.tab;
 
         egui::SidePanel::left("sidebar")
@@ -58,6 +55,7 @@ impl App {
                 match self.tab {
                     Tab::Changes => {
                         let staged_n = self.files.iter().filter(|f| f.staged()).count();
+                        self.conflict_banner(ui);
 
                         // Commit box pinned at the bottom.
                         egui::TopBottomPanel::bottom("commit_box")
@@ -226,7 +224,7 @@ impl App {
                                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                                 let c = match f.badge() {
                                                     'A' => Color32::from_rgb(63, 185, 80),
-                                                    'D' => Color32::from_rgb(248, 81, 73),
+                                                    'D' | '!' => Color32::from_rgb(248, 81, 73),
                                                     _ => Color32::from_rgb(210, 153, 34),
                                                 };
                                                 let c = if sel { Color32::WHITE } else { c };
@@ -244,109 +242,13 @@ impl App {
                             }
                         });
                     }
-                    Tab::History => {
-                        ui.horizontal(|ui| {
-                            ui.add_space(6.0);
-                            let label = match &self.compare {
-                                Some(b) => format!("Compare: {b}"),
-                                None => "Compare to branch...".to_string(),
-                            };
-                            ui.menu_button(label, |ui| {
-                                ui.set_min_width(200.0);
-                                if ui.button("None (show history)").clicked() {
-                                    new_compare = Some(None);
-                                    ui.close_menu();
-                                }
-                                ui.separator();
-                                let others = self.branches.iter().filter(|b| **b != self.branch);
-                                for b in others.chain(self.remote_branches.iter()) {
-                                    if ui.button(b).clicked() {
-                                        new_compare = Some(Some(b.clone()));
-                                        ui.close_menu();
-                                    }
-                                }
-                            });
-                        });
-                        if let Some(b) = &self.compare {
-                            let (ours, theirs) = self.compare_counts;
-                            ui.horizontal(|ui| {
-                                ui.add_space(8.0);
-                                ui.label(
-                                    RichText::new(format!("{theirs} behind, {ours} ahead of {b}"))
-                                        .size(11.5)
-                                        .color(p.muted),
-                                );
-                            });
-                        }
-                        ui.separator();
-                        let list: &Vec<Commit> =
-                            if self.compare.is_some() { &self.compare_commits } else { &self.commits };
-                        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                            ui.spacing_mut().item_spacing.y = 0.0;
-                            for c in list {
-                                let sel = self.selected_commit.as_deref() == Some(c.hash.as_str());
-                                let (rect, resp) =
-                                    ui.allocate_exact_size(egui::vec2(ui.available_width(), 44.0), Sense::click());
-                                let fill = if sel {
-                                    ACCENT
-                                } else if resp.hovered() {
-                                    p.hover
-                                } else {
-                                    Color32::TRANSPARENT
-                                };
-                                ui.painter().rect_filled(rect, 0.0, fill);
-                                let fg = if sel { Color32::WHITE } else { p.text };
-                                let dim = if sel { Color32::from_rgb(220, 235, 255) } else { p.muted };
-                                let clip = ui.painter().with_clip_rect(rect.shrink2(egui::vec2(8.0, 0.0)));
-                                clip.text(
-                                    rect.min + egui::vec2(10.0, 14.0),
-                                    Align2::LEFT_CENTER,
-                                    &c.subject,
-                                    FontId::proportional(13.0),
-                                    fg,
-                                );
-                                clip.text(
-                                    rect.min + egui::vec2(10.0, 31.0),
-                                    Align2::LEFT_CENTER,
-                                    format!("{} · {}", c.author, c.when),
-                                    FontId::proportional(11.0),
-                                    dim,
-                                );
-                                if resp.clicked() {
-                                    pick_commit = Some(c.hash.clone());
-                                }
-                                resp.context_menu(|ui| {
-                                    if ui.button("Create tag here...").clicked() {
-                                        tag_here = Some(c.hash.clone());
-                                        ui.close_menu();
-                                    }
-                                    if ui.button("Copy commit hash").clicked() {
-                                        ui.ctx().copy_text(c.hash.clone());
-                                        ui.close_menu();
-                                    }
-                                });
-                            }
-                            if list.is_empty() {
-                                ui.add_space(30.0);
-                                ui.vertical_centered(|ui| {
-                                    ui.label(RichText::new("No commits yet").color(p.muted));
-                                });
-                            }
-                        });
-                    }
+                    Tab::History => self.history_tab(ui, &p),
                 }
             });
 
         self.tab = new_tab;
         if do_stash {
             self.stash_changes();
-        }
-        if let Some(h) = tag_here {
-            self.tag_target = h;
-            self.dialog = Some(Dialog::Tags);
-        }
-        if let Some(c) = new_compare {
-            self.set_compare(c);
         }
         if let Some(pattern) = ignore {
             self.ignore(&pattern);
@@ -385,12 +287,6 @@ impl App {
         }
         if ask.is_some() {
             self.confirm = ask;
-        }
-        if let Some(h) = pick_commit {
-            if let Some(repo) = self.repo() {
-                self.commit_diff = git::parse_diff(&git::show(&repo, &h), true);
-            }
-            self.selected_commit = Some(h);
         }
     }
 }

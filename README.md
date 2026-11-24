@@ -18,6 +18,7 @@ src/
     repos.rs         open/add/remove repos, refresh, stage, background jobs
     staging.rs       line/hunk staging, compare, ignore actions
     refs.rs          stash, tag and worktree actions
+    history.rs       commit actions, rewrite, conflicts
   git/               thin wrappers over the git command (no UI code)
     exec.rs          run git, with or without stdin
     status.rs        status, stage, unstage, discard, file diff
@@ -29,6 +30,9 @@ src/
     stash.rs         stash list, push, apply, pop, drop
     tag.rs           tags
     worktree.rs      worktrees (has tests)
+    graph.rs         commit graph lanes
+    rewrite.rs       reword, squash, drop (non-interactive rebase)
+    conflict.rs      merge/rebase state, conflict resolution (has tests)
     repo.rs          init, scan for repositories
     config.rs        git config
     external.rs      open in editor, show in Finder
@@ -43,7 +47,11 @@ src/
     main_panel.rs    diff of the selected file or commit
     dialogs.rs       confirm dialogs and the error bar
     stash.rs         stashed changes list in the Changes tab
-    manage.rs        Tags and Worktrees windows
+    manage.rs        Tags, Worktrees and Reword windows
+    history.rs       History tab: commit list, files, context menu
+    graph.rs         draws one graph row
+    conflicts.rs     conflict banner
+    icons.rs         Phosphor icons from 1git (assets/icons)
 assets/              app icon (from 1git)
 PORTING.md           list of 1git features and what is done
 ```

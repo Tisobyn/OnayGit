@@ -8,12 +8,18 @@ impl App {
         let mut open_editor = false;
         let mut reveal = false;
         let mut stage_selected = false;
+        let mut resolve: Option<ConflictAct> = None;
         let mut mode: Option<bool> = None;
         let mut events: Vec<DiffEvent> = Vec::new();
 
         egui::CentralPanel::default().frame(egui::Frame::none().fill(p.bg)).show(ctx, |ui| {
             let changes = self.tab == Tab::Changes;
             let stash_view = changes && self.selected_stash.is_some();
+            let conflicted = self
+                .selected_file
+                .as_ref()
+                .and_then(|p| self.files.iter().find(|f| &f.path == p))
+                .is_some_and(|f| f.conflicted());
             let lines: &[DiffLine] = if stash_view {
                 &self.stash_diff
             } else if changes {
@@ -44,6 +50,19 @@ impl App {
                                 }
                                 if ui.small_button("Open in editor").clicked() {
                                     open_editor = true;
+                                }
+                                if f.conflicted() {
+                                    if ui.small_button("Mark resolved").clicked() {
+                                        resolve = Some(ConflictAct::Resolved);
+                                    }
+                                    if ui.small_button("Use theirs").clicked() {
+                                        resolve = Some(ConflictAct::Theirs);
+                                    }
+                                    if ui.small_button("Use ours").clicked() {
+                                        resolve = Some(ConflictAct::Ours);
+                                    }
+                                    ui.label(RichText::new("Conflict").size(12.0).color(Color32::from_rgb(248, 81, 73)));
+                                    return;
                                 }
                                 ui.separator();
                                 let n = self.sel_lines.len();
@@ -82,7 +101,7 @@ impl App {
                     };
                     ui.label(RichText::new(msg).size(17.0).color(p.muted));
                 });
-            } else if changes && !stash_view {
+            } else if changes && !stash_view && !conflicted {
                 let label = if self.diff_staged { "Unstage hunk" } else { "Stage hunk" };
                 events = draw_diff(ui, lines, &p, self.settings.diff_font, Some(&self.sel_lines), label);
             } else {
@@ -90,6 +109,11 @@ impl App {
             }
         });
 
+        if let Some(a) = resolve {
+            if let Some(path) = self.selected_file.clone() {
+                self.resolve_conflict(&path, a);
+            }
+        }
         let mut hunk: Option<usize> = None;
         for e in events {
             match e {

@@ -20,11 +20,11 @@ Status: `[x]` done, `[ ]` todo. Port in order, one by one.
 - [x] 10. Worktrees: list, add, remove, switch
 
 ## History
-- [ ] 11. Per-commit file list in History
-- [ ] 12. Commit graph
-- [ ] 13. Cherry-pick, revert, reset to commit
-- [ ] 14. Rewrite history (reword, squash, drop)
-- [ ] 15. Sync and conflict review
+- [x] 11. Per-commit file list in History
+- [x] 12. Commit graph
+- [x] 13. Cherry-pick, revert, reset to commit
+- [x] 14. Rewrite history (reword, squash, drop)
+- [x] 15. Sync and conflict review
 
 ## App shell
 - [ ] 16. Tabs (several repositories in one window)

@@ -1,5 +1,8 @@
+pub mod conflicts;
 pub mod dialogs;
 pub mod diff_view;
+pub mod graph;
+pub mod history;
 pub mod home;
 pub mod icons;
 pub mod main_panel;

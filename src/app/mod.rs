@@ -1,6 +1,7 @@
 #[allow(unused_imports)]
 use crate::prelude::*;
 
+pub mod history;
 pub mod refs;
 mod repos;
 mod staging;
@@ -33,6 +34,9 @@ pub enum Confirm {
     Discard(String),
     DiscardAll,
     DeleteBranch(String),
+    ResetHard(String),
+    Rewrite(git::RewriteOp, String),
+    AbortOp,
 }
 
 pub enum Action {
@@ -47,6 +51,7 @@ pub enum Action {
 pub enum Dialog {
     Tags,
     Worktrees,
+    Reword,
 }
 
 pub type Done = (String, Result<String, String>);
@@ -106,6 +111,13 @@ pub struct App {
     pub tag_target: String,
     pub wt_name: String,
     pub wt_new_branch: bool,
+    pub commit_files: Vec<(char, String)>,
+    pub selected_commit_file: Option<String>,
+    pub graph: Vec<git::GraphRow>,
+    pub graph_width: usize,
+    pub repo_op: Option<git::RepoOp>,
+    pub reword_hash: String,
+    pub reword_text: String,
     pub amend: bool,
     pub confirm: Option<Confirm>,
     pub last_commit: Option<(String, String)>,
@@ -177,6 +189,13 @@ impl App {
             tag_target: String::new(),
             wt_name: String::new(),
             wt_new_branch: true,
+            commit_files: vec![],
+            selected_commit_file: None,
+            graph: vec![],
+            graph_width: 1,
+            repo_op: None,
+            reword_hash: String::new(),
+            reword_text: String::new(),
             amend: false,
             confirm: None,
             last_commit: None,

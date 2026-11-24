@@ -8,6 +8,22 @@ impl App {
             Confirm::Discard(p) => ("Discard changes", format!("Discard changes to {p}? This cannot be undone.")),
             Confirm::DiscardAll => ("Discard all changes", "Discard ALL local changes? This cannot be undone.".to_string()),
             Confirm::DeleteBranch(b) => ("Delete branch", format!("Delete branch {b}? Unmerged commits can be lost.")),
+            Confirm::ResetHard(h) => (
+                "Hard reset",
+                format!("Reset the current branch to {} and discard all local changes?", &h[..7.min(h.len())]),
+            ),
+            Confirm::Rewrite(op, h) => {
+                let what = match op {
+                    git::RewriteOp::Drop => "Drop",
+                    git::RewriteOp::Squash => "Squash",
+                    git::RewriteOp::Reword => "Reword",
+                };
+                (
+                    "Rewrite history",
+                    format!("{what} commit {}? This rewrites history. Pushed commits will need a force push.", &h[..7.min(h.len())]),
+                )
+            }
+            Confirm::AbortOp => ("Abort", "Abort the operation in progress and go back to how things were?".to_string()),
         };
         let (mut yes, mut no) = (false, false);
         egui::Window::new(title)
@@ -37,6 +53,12 @@ impl App {
                     },
                     Confirm::DiscardAll => git::discard_all(&repo),
                     Confirm::DeleteBranch(b) => git::delete_branch(&repo, b).map(|_| ()),
+                    Confirm::ResetHard(h) => git::reset_to(&repo, h, "hard").map(|_| ()),
+                    Confirm::Rewrite(op, h) => git::rewrite(&repo, *op, h, "").map(|_| ()),
+                    Confirm::AbortOp => match self.repo_op {
+                        Some(op) => git::op_abort(&repo, op).map(|_| ()),
+                        None => Ok(()),
+                    },
                 };
                 self.report(r);
                 self.refresh();

@@ -76,6 +76,10 @@ impl App {
             .clone()
             .filter(|p| self.files.iter().any(|f| &f.path == p))
             .or_else(|| self.files.first().map(|f| f.path.clone()));
+        let (graph, width) = git::graph(&self.commits);
+        self.graph = graph;
+        self.graph_width = width;
+        self.repo_op = git::repo_op(&repo);
         self.stashes = git::stashes(&repo);
         self.tags = git::tags(&repo);
         self.worktrees = git::worktrees(&repo);
@@ -111,6 +115,12 @@ impl App {
             self.sel_lines.clear();
             return;
         };
+        if f.conflicted() {
+            self.raw_diff.clear();
+            self.sel_lines.clear();
+            self.diff = git::conflict_lines(repo, &f.path);
+            return;
+        }
         // Stay on a side that still has changes.
         if self.diff_staged && !f.staged() {
             self.diff_staged = false;

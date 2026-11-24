@@ -7,7 +7,32 @@ impl App {
         match self.dialog {
             Some(Dialog::Tags) => self.tags_window(ctx),
             Some(Dialog::Worktrees) => self.worktrees_window(ctx),
+            Some(Dialog::Reword) => self.reword_window(ctx),
             None => {}
+        }
+    }
+
+    fn reword_window(&mut self, ctx: &egui::Context) {
+        let mut open = true;
+        let mut ok = false;
+        egui::Window::new("Reword commit")
+            .open(&mut open)
+            .collapsible(false)
+            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.add(egui::TextEdit::multiline(&mut self.reword_text).desired_rows(4).desired_width(380.0));
+                ui.add_space(6.0);
+                let enabled = !self.reword_text.trim().is_empty();
+                if ui.add_enabled(enabled, egui::Button::new("Reword commit")).clicked() {
+                    ok = true;
+                }
+            });
+        if ok {
+            self.do_reword();
+            self.dialog = None;
+        }
+        if !open {
+            self.dialog = None;
         }
     }
 
