@@ -26,8 +26,13 @@ impl App {
             self.selected_commit = None;
             self.commit_diff.clear();
             self.screen = Screen::Repo;
-            self.refresh();
+            self.begin_load();
         }
+    }
+
+    /// Load the repository after two frames, so a "Loading" overlay is on screen first.
+    pub fn begin_load(&mut self) {
+        self.load_wait = 2;
     }
 
     pub fn scan_folder(&mut self, root: &Path) {
@@ -150,6 +155,42 @@ impl App {
         }
     }
 
+    /// Read a conflicted file for the conflict editor. Choices stay while the file is unchanged.
+    fn load_conflict(&mut self, repo: &Path, path: &str) {
+        if git::is_remote(repo) {
+            self.conflict_segs.clear();
+            return;
+        }
+        let text = git::read_file(repo, path);
+        if self.conflict_path == path && self.conflict_text == text && !self.conflict_segs.is_empty() {
+            return;
+        }
+        self.conflict_segs = git::parse_conflicts(&text);
+        let n = self.conflict_segs.iter().filter(|s| matches!(s, git::Seg::Conflict { .. })).count();
+        self.conflict_picks = vec![git::Pick::Undecided; n];
+        self.conflict_edits = vec![String::new(); n];
+        self.conflict_path = path.to_string();
+        self.conflict_text = text;
+        if n == 0 {
+            self.conflict_segs.clear();
+        }
+    }
+
+    /// Write the chosen resolution of the open conflict and mark the file resolved.
+    pub fn save_conflict(&mut self) {
+        let Some(repo) = self.repo() else { return };
+        let Some(text) = git::resolve_text(&self.conflict_segs, &self.conflict_picks, &self.conflict_edits) else {
+            self.status_msg = "Choose a side for every conflict first".into();
+            return;
+        };
+        let path = self.conflict_path.clone();
+        let r = git::save_resolved(&repo, &path, &text);
+        if self.report(r) {
+            self.conflict_segs.clear();
+        }
+        self.refresh();
+    }
+
     /// Reload the diff of the selected file in staged or unstaged mode.
     fn load_diff(&mut self, repo: &Path) {
         let file = self
@@ -158,6 +199,9 @@ impl App {
             .and_then(|p| self.files.iter().find(|f| &f.path == p))
             .cloned();
         self.img_before = None;
+        if !file.as_ref().is_some_and(|f| f.conflicted()) {
+            self.conflict_segs.clear();
+        }
         if let Some(f) = &file {
             if git::is_image(&f.path) && !git::is_remote(repo) && f.work != '?' {
                 self.img_before = git::blob_to_temp(repo, "HEAD", &f.path);
@@ -173,6 +217,7 @@ impl App {
             self.raw_diff.clear();
             self.sel_lines.clear();
             self.diff = git::conflict_lines(repo, &f.path);
+            self.load_conflict(repo, &f.path);
             return;
         }
         // Stay on a side that still has changes.

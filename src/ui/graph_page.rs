@@ -145,6 +145,9 @@ impl App {
                     }
                     let subj = ui.painter().with_clip_rect(egui::Rect::from_min_max(egui::pos2(x, rect.top()), egui::pos2(limit, rect.bottom())));
                     subj.text(egui::pos2(x, rect.center().y), Align2::LEFT_CENTER, &c.subject, FontId::proportional(13.5), p.text);
+                    if !c.date.is_empty() {
+                        resp.clone().on_hover_text(&c.date);
+                    }
                     if resp.clicked() {
                         pick = Some(c.hash.clone());
                     }

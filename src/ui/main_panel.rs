@@ -8,6 +8,7 @@ impl App {
         let mut reveal = false;
         let mut stage_selected = false;
         let mut resolve: Option<ConflictAct> = None;
+        let mut save_conflict = false;
         let mut mode: Option<bool> = None;
         let mut events: Vec<DiffEvent> = Vec::new();
         let mut restore_ignored = false;
@@ -200,6 +201,8 @@ impl App {
                         cols[1].add(egui::Image::new(format!("file://{}", after.display())).max_width(cols[1].available_width()).max_height(420.0));
                     }
                 });
+            } else if conflicted && changes && !stash_view && !self.conflict_segs.is_empty() {
+                save_conflict = super::conflicts::conflict_editor(ui, &p, self.settings.diff_font, &self.conflict_segs, &mut self.conflict_picks, &mut self.conflict_edits);
             } else if lines.is_empty() {
                 ui.vertical_centered(|ui| {
                     ui.add_space(ui.available_height() / 3.0);
@@ -227,6 +230,9 @@ impl App {
             }
         });
 
+        if save_conflict {
+            self.save_conflict();
+        }
         if let Some(n) = show_all {
             self.show_big_diff = n;
         }

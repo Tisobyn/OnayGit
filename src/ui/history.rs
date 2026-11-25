@@ -6,6 +6,8 @@ impl App {
         let mut new_compare: Option<Option<String>> = None;
         let mut pick: Option<String> = None;
         let mut action: Option<(CommitAction, String)> = None;
+        let mut run_search = false;
+        let mut clear_search = false;
 
         ui.horizontal(|ui| {
             ui.add_space(6.0);
@@ -61,10 +63,32 @@ impl App {
         if self.filter_open {
             ui.horizontal(|ui| {
                 ui.add_space(10.0);
-                let r = framed(ui, p, egui::TextEdit::singleline(&mut self.filter).hint_text("Filter commits").desired_width(ui.available_width() - 10.0));
+                let r = framed(ui, p, egui::TextEdit::singleline(&mut self.filter).hint_text("Filter, or press Enter to search all history").desired_width(ui.available_width() - 10.0));
                 if self.focus_filter {
                     r.request_focus();
                     self.focus_filter = false;
+                }
+                if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    run_search = true;
+                }
+            });
+            if self.filter.is_empty() && !self.search_active.is_empty() {
+                clear_search = true;
+            }
+            if self.filter.is_empty() && self.search_active.is_empty() {
+                ui.horizontal(|ui| {
+                    ui.add_space(12.0);
+                    ui.label(RichText::new("Search: words, author:name, file:path, since:2024-01-01, until:2024-12-31").size(11.0).color(p.muted));
+                });
+            }
+        }
+        if !self.search_active.is_empty() {
+            ui.horizontal(|ui| {
+                ui.add_space(12.0);
+                let t = if self.searching { format!("Searching for \u{201c}{}\u{201d}...", self.search_active) } else { format!("{} result{} for \u{201c}{}\u{201d}", self.search_results.len(), if self.search_results.len() == 1 { "" } else { "s" }, self.search_active) };
+                ui.label(RichText::new(t).size(12.0).color(p.muted));
+                if ui.small_button("Clear").clicked() {
+                    clear_search = true;
                 }
             });
         }
@@ -87,11 +111,12 @@ impl App {
                 });
             });
 
-        let comparing = self.compare.is_some();
-        let list: &Vec<Commit> = if comparing { &self.compare_commits } else { &self.commits };
+        let searching = !self.search_active.is_empty();
+        let comparing = self.compare.is_some() || searching;
+        let list: &Vec<Commit> = if searching { &self.search_results } else if comparing { &self.compare_commits } else { &self.commits };
         let needs_graph = !comparing && self.commits.iter().any(|c| c.parents.len() > 1);
         let graph_w = if needs_graph { graph_px(self.graph_width) } else { 0.0 };
-        let q = self.filter.to_lowercase();
+        let q = if searching { String::new() } else { self.filter.to_lowercase() };
         let unpushed = match self.ahead_behind {
             Some((a, _)) => a as usize,
             None => usize::MAX,
@@ -115,12 +140,14 @@ impl App {
         let mut more = false;
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
+            let rh = if self.settings.compact { 42.0 } else { 54.0 };
+            let k = rh / 54.0;
             for (i, c) in list.iter().enumerate() {
                 if !q.is_empty() && !(c.subject.to_lowercase().contains(&q) || c.author.to_lowercase().contains(&q) || c.hash.starts_with(&q) || c.coauthors.iter().any(|p| p.name.to_lowercase().contains(&q))) {
                     continue;
                 }
                 let sel = self.selected_commit.as_deref() == Some(c.hash.as_str());
-                let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 54.0), Sense::click());
+                let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), rh), Sense::click());
                 if sel || resp.hovered() {
                     ui.painter().rect_filled(rect.shrink2(egui::vec2(6.0, 1.0)), 6.0, if sel { p.hover } else { p.hover.gamma_multiply(0.5) });
                 }
@@ -135,13 +162,13 @@ impl App {
                 match self.settings.commit_badges.then(|| split_conventional(&c.subject)).flatten() {
                     Some((kind, rest)) => {
                         let galley = ui.painter().layout_no_wrap(kind.to_string(), FontId::proportional(11.0), badge_color(kind));
-                        let br = egui::Rect::from_min_size(egui::pos2(x, rect.min.y + 9.0), galley.size() + egui::vec2(12.0, 4.0));
+                        let br = egui::Rect::from_min_size(egui::pos2(x, rect.min.y + 9.0 * k), galley.size() + egui::vec2(12.0, 4.0));
                         clip.rect_filled(br, 4.0, badge_color(kind).gamma_multiply(0.18));
                         clip.galley(br.min + egui::vec2(6.0, 2.0), galley, p.text);
-                        clip.text(egui::pos2(br.max.x + 8.0, rect.min.y + 18.0), Align2::LEFT_CENTER, rest, FontId::proportional(13.5), p.text);
+                        clip.text(egui::pos2(br.max.x + 8.0, rect.min.y + 18.0 * k), Align2::LEFT_CENTER, rest, FontId::proportional(13.5), p.text);
                     }
                     None => {
-                        clip.text(egui::pos2(x, rect.min.y + 18.0), Align2::LEFT_CENTER, &c.subject, FontId::proportional(13.5), p.text);
+                        clip.text(egui::pos2(x, rect.min.y + 18.0 * k), Align2::LEFT_CENTER, &c.subject, FontId::proportional(13.5), p.text);
                     }
                 }
                 let short: String = c.hash.chars().take(7).collect();
@@ -151,10 +178,13 @@ impl App {
                         want.push((person.email.clone(), (n == 0).then(|| c.hash.clone())));
                     }
                 }
-                let aw = paint_avatars(ui, p, egui::pos2(x, rect.min.y + 37.0), &people, &self.avatars, 16.0);
-                clip.text(egui::pos2(x + aw + 6.0, rect.min.y + 37.0), Align2::LEFT_CENTER, format!("{} \u{2022} {} \u{b7} {short}", people_names(&people), c.when), FontId::proportional(11.5), p.muted);
+                let aw = paint_avatars(ui, p, egui::pos2(x, rect.min.y + 37.0 * k), &people, &self.avatars, 16.0);
+                clip.text(egui::pos2(x + aw + 6.0, rect.min.y + 37.0 * k), Align2::LEFT_CENTER, format!("{} \u{2022} {} \u{b7} {short}", people_names(&people), c.when), FontId::proportional(11.5), p.muted);
                 if !comparing && i < unpushed {
                     paint_icon(ui, "arrowUp", egui::Rect::from_center_size(egui::pos2(rect.max.x - 24.0, rect.center().y), egui::vec2(14.0, 14.0)), p.muted);
+                }
+                if !c.date.is_empty() {
+                    resp.clone().on_hover_text(&c.date);
                 }
                 if resp.clicked() {
                     pick = Some(c.hash.clone());
@@ -211,7 +241,7 @@ impl App {
             if list.is_empty() {
                 ui.add_space(30.0);
                 ui.vertical_centered(|ui| {
-                    ui.label(RichText::new("No commits yet").color(p.muted));
+                    ui.label(RichText::new(if searching && !self.searching { "Nothing found" } else if searching { "" } else { "No commits yet" }).color(p.muted));
                 });
             } else if !comparing && q.is_empty() && list.len() >= self.log_limit {
                 ui.add_space(10.0);
@@ -228,6 +258,12 @@ impl App {
             self.refresh();
         }
         let ctx = ui.ctx().clone();
+        if run_search {
+            self.start_search(&ctx);
+        }
+        if clear_search {
+            self.clear_search();
+        }
         for (email, sha) in want {
             self.want_avatar(&ctx, &email, sha.as_deref());
         }

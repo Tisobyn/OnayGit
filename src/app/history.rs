@@ -25,6 +25,32 @@ pub enum ConflictAct {
 
 impl App {
     /// Load every branch and tag and the commits of the whole repository for the Graph tab.
+    /// Search the whole history of the current branch on a thread.
+    pub fn start_search(&mut self, ctx: &egui::Context) {
+        let q = self.filter.trim().to_string();
+        let Some(repo) = self.repo() else { return };
+        if q.is_empty() {
+            self.clear_search();
+            return;
+        }
+        self.search_active = q.clone();
+        self.search_results.clear();
+        self.searching = true;
+        let tx = self.search_tx.clone();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let found = git::search_log(&repo, &q, 500);
+            let _ = tx.send((q, found));
+            ctx.request_repaint();
+        });
+    }
+
+    pub fn clear_search(&mut self) {
+        self.search_active.clear();
+        self.search_results.clear();
+        self.searching = false;
+    }
+
     pub fn load_graph(&mut self) {
         let Some(repo) = self.repo() else { return };
         self.graph_list = git::ref_list(&repo);

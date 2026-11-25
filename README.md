@@ -53,13 +53,15 @@
 | | |
 |---|---|
 | **Changes** | File list or tree, line and hunk staging, commit, amend, undo last commit, discard, ignore |
-| **History** | Commit graph, changed files column, pictures and co-authors, tag, cherry-pick, revert, reset, reword, squash |
+| **Conflicts** | Block by block editor: ours, theirs, both or edit by hand |
+| **History** | Commit graph, search (words, author, file, dates), changed files column, pictures and co-authors, tag, cherry-pick, revert, reset, reword, squash |
 | **Side rail** | One sync button (fetch, pull, push, publish) with ahead/behind badge, pull requests, Changes, History, Stashes, Graph |
 | **Branches** | Switch, create, merge, delete, compare, worktrees, stash |
 | **Remotes** | Fetch, pull, push, publish to GitHub or GitLab, pull requests |
 | **Organise** | Tabs (drag to reorder), spaces with icons and colours, quick switcher, SSH machines |
 | **Ignored changes** | Save snapshots of ignored files and see what changed |
 | **AI** | Write a commit message with your own provider or command |
+| **Live** | File watcher updates the window at once. `onaygit .` opens a folder in the running app |
 | **Look** | 5 themes, accent colours, fonts, optional grain |
 
 ## Install

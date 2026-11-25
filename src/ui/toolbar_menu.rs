@@ -43,6 +43,7 @@ impl App {
         }
         self.repo_filter.clear();
         self.branch_filter.clear();
+        self.branch_err.clear();
     }
 
     /// Draw the open dropdown. `cells` are the toolbar cells, so clicks on them do not count as outside clicks.
@@ -260,11 +261,18 @@ impl App {
                                 if !r.has_focus() && self.branch_filter.is_empty() && ui.memory(|m| m.focused().is_none()) {
                                     r.request_focus();
                                 }
-                                let can = !self.branch_filter.trim().is_empty();
-                                if ui.add_enabled(can, egui::Button::new("New Branch")).clicked() {
+                                let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                                if ui.button("New Branch").clicked() || enter {
                                     new_branch = true;
                                 }
                             });
+                            if !self.branch_err.is_empty() {
+                                ui.add_space(4.0);
+                                ui.horizontal(|ui| {
+                                    ui.add_space(14.0);
+                                    ui.add(egui::Label::new(RichText::new(&self.branch_err).size(12.5).color(Color32::from_rgb(230, 100, 100))).wrap());
+                                });
+                            }
                             ui.add_space(6.0);
                             let q = self.branch_filter.to_lowercase();
                             let def = ["main", "master"].iter().find(|d| self.branches.iter().any(|b| b == *d)).map(|d| d.to_string());
@@ -367,7 +375,7 @@ impl App {
             self.selected_file = None;
             self.selected_commit = None;
             self.commit_diff.clear();
-            self.refresh();
+            self.begin_load();
             close = true;
         }
         if let Some(b) = switch_branch {
@@ -387,13 +395,24 @@ impl App {
             close = true;
         }
         if new_branch {
-            if let Some(repo) = self.repo() {
-                let name = self.branch_filter.trim().replace(' ', "-");
-                let r = git::create_branch(&repo, &name);
-                self.report(r);
-                self.refresh();
+            self.branch_err.clear();
+            let name = self.branch_filter.trim().replace(' ', "-");
+            if name.is_empty() {
+                self.branch_err = "Type a name in the box, then press New Branch.".into();
+            } else if let Some(repo) = self.repo() {
+                if self.branches.contains(&name) {
+                    self.branch_err = format!("A branch named {name} already exists.");
+                } else {
+                    match git::create_branch(&repo, &name) {
+                        Ok(_) => {
+                            self.status_msg.clear();
+                            self.refresh();
+                            close = true;
+                        }
+                        Err(e) => self.branch_err = e.lines().next().unwrap_or("").trim_start_matches("fatal: ").to_string(),
+                    }
+                }
             }
-            close = true;
         }
         if load_prs {
             self.load_prs(ctx);

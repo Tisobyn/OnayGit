@@ -165,7 +165,7 @@ impl App {
         settings_group(ui, p, "General", "", |_| {}, |ui| {
             group_row(ui, p, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Auto refresh").color(p.text));
+                    ui.label(RichText::new("Backup refresh").color(p.text));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.add(egui::Slider::new(&mut self.settings.refresh_secs, 1..=30).suffix(" s"));
                     });
@@ -499,6 +499,14 @@ impl App {
                         }
                     });
                 });
+            });
+        });
+        settings_group(ui, p, "Layout", "", |_| {}, |ui| {
+            group_row(ui, p, |ui| {
+                toggle_row(ui, p, "Labels under rail icons", "Show a short name under each icon in the left rail.", &mut self.settings.rail_labels);
+            });
+            group_row(ui, p, |ui| {
+                toggle_row(ui, p, "Compact lists", "Tighter rows in the file and commit lists. Shows more on screen.", &mut self.settings.compact);
             });
         });
         settings_group(ui, p, "Commit messages", "", |_| {}, |ui| {
@@ -1224,9 +1232,8 @@ impl App {
         page_header(ui, p, "Help", "Guides, setup, and support for OnayGit.", |_| {});
         let mut url: Option<&str> = None;
         settings_group(ui, p, "Getting started", "", |_| {}, |ui| {
-            for (title, desc, button) in [
-                ("First-run setup", "", "Run setup again"),
-            ] {
+            {
+                let (title, desc, button) = ("First-run setup", "", "Run setup again");
                 group_row(ui, p, |ui| {
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {

@@ -6,6 +6,7 @@ use crate::ui::settings_page::space_color32;
 
 const TITLE_H: f32 = 40.0;
 const RAIL_W: f32 = 52.0;
+const RAIL_W_LABELS: f32 = 78.0;
 const GAP: f32 = 8.0;
 const RADIUS: f32 = 12.0;
 
@@ -33,6 +34,24 @@ fn rail_badge(ui: &egui::Ui, rect: egui::Rect, p: &Pal, parts: &[(&str, usize)])
         ui.painter().text(egui::pos2(x, pill.center().y), Align2::LEFT_CENTER, n.min(&99).to_string(), font.clone(), p.text);
         x += w - if ic.is_empty() { 0.0 } else { 8.0 } + 3.0;
     }
+}
+
+/// Rail button: an icon, or an icon with a short name under it.
+#[allow(clippy::too_many_arguments)]
+fn rail_button(ui: &mut egui::Ui, name: &str, label: &str, tip: &str, selected: bool, p: &Pal, labels: bool, tint: Option<Color32>) -> egui::Response {
+    let tint = tint.unwrap_or(if selected { p.text } else { p.muted });
+    if !labels {
+        return icon_button_tint(ui, name, tip, selected, p, tint);
+    }
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 46.0), Sense::click());
+    if selected || resp.hovered() {
+        let a = if selected { 8 } else { 4 };
+        let fill = if p.bg.r() > 128 { Color32::from_rgba_unmultiplied(0, 0, 0, a) } else { Color32::from_rgba_unmultiplied(255, 255, 255, a) };
+        ui.painter().rect_filled(rect, 8.0, fill);
+    }
+    paint_icon(ui, name, egui::Rect::from_center_size(egui::pos2(rect.center().x, rect.top() + 16.0), egui::vec2(18.0, 18.0)), tint);
+    ui.painter().text(egui::pos2(rect.center().x, rect.bottom() - 9.0), Align2::CENTER_CENTER, label, FontId::proportional(10.0), tint);
+    resp.on_hover_text(tip)
 }
 
 fn icon_button(ui: &mut egui::Ui, name: &str, tip: &str, selected: bool, p: &Pal) -> egui::Response {
@@ -234,8 +253,9 @@ impl App {
         let mut sync: Option<(&str, Vec<String>)> = None;
         let mut publish = false;
         let mut menu: Option<(u8, egui::Rect)> = None;
+        let labels = self.settings.rail_labels;
         egui::SidePanel::left("rail")
-            .exact_width(RAIL_W)
+            .exact_width(if self.settings.rail_labels { RAIL_W_LABELS } else { RAIL_W })
             .resizable(false)
             .show_separator_line(false)
             .frame(egui::Frame::none().fill(p.chrome).inner_margin(egui::Margin::symmetric(8.0, 6.0)))
@@ -245,7 +265,10 @@ impl App {
                     // Sync: one button for fetch, pull, push and publish, with a count badge.
                     let (sicon, title, sub, args) = self.sync_info();
                     let busy = self.busy.is_some();
-                    let r = icon_button(ui, sicon, &format!("{title}\n{sub}"), busy, p);
+                    let r = rail_button(ui, sicon, "Sync", &format!("{title}\n{sub}"), busy, p, labels, None);
+                    if busy {
+                        ui.put(egui::Rect::from_center_size(r.rect.center(), egui::vec2(16.0, 16.0)), egui::Spinner::new().size(16.0));
+                    }
                     let (ahead, behind) = self.ahead_behind.unwrap_or((0, 0));
                     rail_badge(ui, r.rect, p, &[("arrowUp", ahead as usize), ("arrowDown", behind as usize)]);
                     if r.clicked() && !busy {
@@ -254,36 +277,36 @@ impl App {
                             None => publish = true,
                         }
                     }
-                    if icon_button(ui, "branch", "Pull requests", false, p).clicked() {
+                    if rail_button(ui, "branch", "PRs", "Pull requests", false, p, labels, None).clicked() {
                         prs = true;
                     }
                     ui.add_space(2.0);
                     ui.separator();
                     ui.add_space(2.0);
-                    if icon_button(ui, "tree", "Changes", self.tab == Tab::Changes, p).clicked() {
+                    if rail_button(ui, "tree", "Changes", "Changes", self.tab == Tab::Changes, p, labels, None).clicked() {
                         new_tab = Some(Tab::Changes);
                     }
-                    if icon_button(ui, "history", "History", self.tab == Tab::History, p).clicked() {
+                    if rail_button(ui, "history", "History", "History", self.tab == Tab::History, p, labels, None).clicked() {
                         new_tab = Some(Tab::History);
                     }
-                    let r = icon_button(ui, "archive", "Stashes", false, p);
+                    let r = rail_button(ui, "archive", "Stashes", "Stashes", false, p, labels, None);
                     rail_badge(ui, r.rect, p, &[("", self.stashes.len())]);
                     if r.clicked() {
                         new_tab = Some(Tab::Changes);
                         self.stash_open = true;
                     }
-                    if icon_button(ui, "network", "Graph", self.tab == Tab::Graph, p).clicked() {
+                    if rail_button(ui, "network", "Graph", "Graph", self.tab == Tab::Graph, p, labels, None).clicked() {
                         new_tab = Some(Tab::Graph);
                     }
                 }
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
                     ui.spacing_mut().item_spacing.y = 6.0;
-                    let r = icon_button(ui, "github", "Accounts", false, p);
+                    let r = rail_button(ui, "github", "Accounts", "Accounts", false, p, labels, None);
                     if r.clicked() {
                         menu = Some((2, r.rect));
                     }
                     let in_repo = self.screen == Screen::Repo;
-                    let r = icon_button(ui, "settings", if in_repo { "Workspace settings (Cmd+, opens Settings)" } else { "Settings (Cmd+,)" }, self.screen == Screen::Settings, p);
+                    let r = rail_button(ui, "settings", "Settings", if in_repo { "Workspace settings (Cmd+, opens Settings)" } else { "Settings (Cmd+,)" }, self.screen == Screen::Settings, p, labels, None);
                     if r.clicked() {
                         if in_repo {
                             menu = Some((0, r.rect));
@@ -295,11 +318,11 @@ impl App {
                         Some(s) => (space_icon_name(&s.icon), if s.color.is_some() { space_color32(s.color) } else { p.muted }),
                         None => ("layers".to_string(), p.muted),
                     };
-                    let r = icon_button_tint(ui, &sicon, "Spaces", false, p, scol);
+                    let r = rail_button(ui, &sicon, "Spaces", "Spaces", false, p, labels, Some(scol));
                     if r.clicked() {
                         menu = Some((1, r.rect));
                     }
-                    if icon_button(ui, "home", "Repositories", self.screen == Screen::Home, p).clicked() {
+                    if rail_button(ui, "home", "Home", "Repositories", self.screen == Screen::Home, p, labels, None).clicked() {
                         home = true;
                     }
                 });

@@ -101,6 +101,109 @@ pub fn conflict_lines(repo: &Path, path: &str) -> Vec<DiffLine> {
     out
 }
 
+/// One piece of a conflicted file.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Seg {
+    Text(Vec<String>),
+    Conflict { ours_label: String, theirs_label: String, ours: Vec<String>, theirs: Vec<String> },
+}
+
+/// What to keep for one conflict.
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub enum Pick {
+    #[default]
+    Undecided,
+    Ours,
+    Theirs,
+    Both,
+    /// Use the text typed in the editor.
+    Custom,
+}
+
+/// Split a file with conflict markers into plain text and conflicts. Understands the diff3 style too.
+pub fn parse_conflicts(text: &str) -> Vec<Seg> {
+    let mut segs = Vec::new();
+    let mut plain: Vec<String> = Vec::new();
+    // 0 outside, 1 ours, 2 base, 3 theirs
+    let mut state = 0u8;
+    let (mut ours, mut theirs) = (Vec::new(), Vec::new());
+    let mut ol = String::new();
+    for line in text.lines() {
+        match state {
+            0 if line.starts_with("<<<<<<<") => {
+                if !plain.is_empty() {
+                    segs.push(Seg::Text(std::mem::take(&mut plain)));
+                }
+                ol = line[7..].trim().to_string();
+                state = 1;
+            }
+            0 => plain.push(line.to_string()),
+            1 if line.starts_with("|||||||") => state = 2,
+            1 if line.starts_with("=======") => state = 3,
+            1 => ours.push(line.to_string()),
+            2 if line.starts_with("=======") => state = 3,
+            2 => {}
+            _ if line.starts_with(">>>>>>>") => {
+                let tl = line[7..].trim().to_string();
+                segs.push(Seg::Conflict {
+                    ours_label: std::mem::take(&mut ol),
+                    theirs_label: tl,
+                    ours: std::mem::take(&mut ours),
+                    theirs: std::mem::take(&mut theirs),
+                });
+                state = 0;
+            }
+            _ => theirs.push(line.to_string()),
+        }
+    }
+    if state != 0 {
+        // Broken markers: keep everything as plain text so nothing is lost.
+        return vec![Seg::Text(text.lines().map(String::from).collect())];
+    }
+    if !plain.is_empty() {
+        segs.push(Seg::Text(plain));
+    }
+    segs
+}
+
+/// The resolved text, or None while a conflict is still undecided. `edits` holds typed text per conflict.
+pub fn resolve_text(segs: &[Seg], picks: &[Pick], edits: &[String]) -> Option<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut c = 0;
+    for seg in segs {
+        match seg {
+            Seg::Text(t) => out.extend(t.iter().cloned()),
+            Seg::Conflict { ours, theirs, .. } => {
+                match picks.get(c).copied().unwrap_or_default() {
+                    Pick::Undecided => return None,
+                    Pick::Ours => out.extend(ours.iter().cloned()),
+                    Pick::Theirs => out.extend(theirs.iter().cloned()),
+                    Pick::Both => {
+                        out.extend(ours.iter().cloned());
+                        out.extend(theirs.iter().cloned());
+                    }
+                    Pick::Custom => out.extend(edits.get(c).map(|e| e.lines().map(String::from).collect::<Vec<_>>()).unwrap_or_default()),
+                }
+                c += 1;
+            }
+        }
+    }
+    let mut text = out.join("\n");
+    if !text.is_empty() {
+        text.push('\n');
+    }
+    Some(text)
+}
+
+/// Write the resolved text and mark the file resolved. Local repositories only.
+pub fn save_resolved(repo: &Path, path: &str, text: &str) -> Result<(), String> {
+    if is_remote(repo) {
+        return Err("Resolve conflicts on a remote machine with Use ours or Use theirs".into());
+    }
+    std::fs::write(repo.join(path), text).map_err(|e| e.to_string())?;
+    mark_resolved(repo, path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +315,20 @@ mod tests {
         let files = commit_files(&d, &log(&d)[0].hash);
         assert_eq!(files, vec![('M', "f".to_string())]);
         let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn parse_and_resolve_conflict_blocks() {
+        let text = "top\n<<<<<<< HEAD\nmine\n=======\nyours\n>>>>>>> other\nmiddle\n<<<<<<< HEAD\na\n||||||| base\nb\n=======\nc\n>>>>>>> other\nend\n";
+        let segs = parse_conflicts(text);
+        assert_eq!(segs.len(), 5);
+        assert!(matches!(&segs[1], Seg::Conflict { ours_label, theirs_label, .. } if ours_label == "HEAD" && theirs_label == "other"));
+        assert_eq!(resolve_text(&segs, &[Pick::Ours, Pick::Undecided], &[]), None);
+        let r = resolve_text(&segs, &[Pick::Both, Pick::Theirs], &[]).unwrap();
+        assert_eq!(r, "top\nmine\nyours\nmiddle\nc\nend\n");
+        let r = resolve_text(&segs, &[Pick::Custom, Pick::Ours], &["x\ny".into(), String::new()]).unwrap();
+        assert_eq!(r, "top\nx\ny\nmiddle\na\nend\n");
+        // broken markers stay plain
+        assert_eq!(parse_conflicts("a\n<<<<<<< x\nb\n"), vec![Seg::Text(vec!["a".into(), "<<<<<<< x".into(), "b".into()])]);
     }
 }

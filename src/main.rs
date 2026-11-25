@@ -1,4 +1,5 @@
 mod app;
+mod instance;
 mod keybinds;
 mod prelude;
 mod settings;
@@ -16,6 +17,9 @@ fn load_icon() -> Option<egui::IconData> {
 }
 
 fn main() -> eframe::Result<()> {
+    if instance::hand_over() {
+        return Ok(());
+    }
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([1280.0, 821.0])
         .with_min_inner_size([800.0, 500.0])

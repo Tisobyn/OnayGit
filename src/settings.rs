@@ -20,6 +20,10 @@ pub struct Settings {
     pub grain_pattern: usize,
     pub grain_strength: usize,
     pub commit_badges: bool,
+    /// Names under the rail icons.
+    pub rail_labels: bool,
+    /// Tighter rows in the file and commit lists.
+    pub compact: bool,
     /// Look up profile pictures of commit authors online.
     pub avatars: bool,
     pub refresh_secs: u64,
@@ -46,6 +50,8 @@ impl Default for Settings {
             grain_pattern: 1,
             grain_strength: 1,
             commit_badges: true,
+            rail_labels: false,
+            compact: false,
             avatars: true,
             refresh_secs: 3,
             editor: "open".into(),
@@ -89,6 +95,8 @@ impl Settings {
                 "grain_pattern" => s.grain_pattern = v.parse().unwrap_or(1).min(2),
                 "grain_strength" => s.grain_strength = v.parse().unwrap_or(1).min(2),
                 "commit_badges" => s.commit_badges = v != "false",
+                "rail_labels" => s.rail_labels = v == "true",
+                "compact" => s.compact = v == "true",
                 "avatars" => s.avatars = v != "false",
                 "refresh_secs" => s.refresh_secs = v.parse().unwrap_or(3),
                 "editor" => s.editor = v.to_string(),
@@ -110,7 +118,7 @@ impl Settings {
 
     pub fn save(&self) {
         let text = format!(
-            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\nai_cli_model={}\nai_effort={}\nai_plan={}\navatars={}\n",
+            "theme={}\nauto_theme={}\nscrollbars={}\nsmooth={}\nauto_include={}\naccent={}\nonboarded={}\ndiff_font={}\nzoom={}\nrefresh_secs={}\neditor={}\nai_provider={}\nai_command={}\nai_model={}\nai_base_url={}\nai_added={}\nai_name={}\nai_instructions={}\nui_font={}\ncode_font={}\ngrain={}\ngrain_pattern={}\ngrain_strength={}\ncommit_badges={}\nai_cli_model={}\nai_effort={}\nai_plan={}\navatars={}\nrail_labels={}\ncompact={}\n",
             self.theme.key(),
             self.auto_theme,
             self.scrollbars,
@@ -132,6 +140,8 @@ impl Settings {
             self.ai.effort,
             self.ai.plan,
             self.avatars,
+            self.rail_labels,
+            self.compact,
         );
         let _ = std::fs::write(settings_path(), text);
     }

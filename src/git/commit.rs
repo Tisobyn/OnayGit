@@ -8,6 +8,8 @@ pub struct Commit {
     /// People named in `Co-authored-by` trailers.
     pub coauthors: Vec<Person>,
     pub when: String,
+    /// Full date, like 2026-11-25 12:30.
+    pub date: String,
     pub subject: String,
     pub parents: Vec<String>,
 }
@@ -80,7 +82,7 @@ pub fn log_n(repo: &Path, range: &str, n: usize) -> Vec<Commit> {
     parse_log(&run(repo, &args).unwrap_or_default())
 }
 
-const LOG_FORMAT: &str = "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%ae%x1f%(trailers:key=Co-authored-by,valueonly,unfold,separator=%x1e)";
+const LOG_FORMAT: &str = "--format=%H%x1f%an%x1f%ar%x1f%s%x1f%P%x1f%ae%x1f%(trailers:key=Co-authored-by,valueonly,unfold,separator=%x1e)%x1f%ai";
 
 fn parse_log(text: &str) -> Vec<Commit> {
     text.lines()
@@ -94,9 +96,42 @@ fn parse_log(text: &str) -> Vec<Commit> {
                 parents: p.next().unwrap_or("").split_whitespace().map(String::from).collect(),
                 email: p.next().unwrap_or("").to_string(),
                 coauthors: p.next().unwrap_or("").split('\x1e').filter_map(Person::parse).collect(),
+                date: p.next().unwrap_or("").chars().take(16).collect(),
             })
         })
         .collect()
+}
+
+/// Search the whole history of HEAD. Words match the message (subject and body). Prefixes:
+/// `author:name`, `file:path`, `since:2024-01-01`, `until:2024-12-31`.
+pub fn search_log(repo: &Path, query: &str, n: usize) -> Vec<Commit> {
+    let max = format!("--max-count={n}");
+    let mut args: Vec<String> = vec!["log".into(), max, "--topo-order".into(), LOG_FORMAT.into(), "-i".into(), "-F".into()];
+    let mut words: Vec<&str> = vec![];
+    let mut file = None;
+    for t in query.split_whitespace() {
+        if let Some(v) = t.strip_prefix("author:") {
+            args.push(format!("--author={v}"));
+        } else if let Some(v) = t.strip_prefix("since:") {
+            args.push(format!("--since={v}"));
+        } else if let Some(v) = t.strip_prefix("until:") {
+            args.push(format!("--until={v}"));
+        } else if let Some(v) = t.strip_prefix("file:") {
+            file = Some(v.to_string());
+        } else {
+            words.push(t);
+        }
+    }
+    if !words.is_empty() {
+        args.push(format!("--grep={}", words.join(" ")));
+    }
+    args.push("HEAD".into());
+    if let Some(f) = file {
+        args.push("--".into());
+        args.push(f);
+    }
+    let refs: Vec<&str> = args.iter().map(|a| a.as_str()).collect();
+    parse_log(&run(repo, &refs).unwrap_or_default())
 }
 
 /// Commits that changed one file, following renames.
@@ -223,8 +258,22 @@ mod history_tests {
         let d = repo("log");
         assert_eq!(log_n(&d, "HEAD", 2).len(), 2);
         assert_eq!(log_n(&d, "HEAD", 10).len(), 3);
+        assert_eq!(log_n(&d, "HEAD", 1)[0].date.len(), 16);
         let f = file_log(&d, "a.txt");
         assert_eq!(f.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["third", "first"]);
+        let _ = std::fs::remove_dir_all(d);
+    }
+
+    #[test]
+    fn search_by_message_author_and_file() {
+        let d = repo("search");
+        let names = |q: &str| search_log(&d, q, 50).into_iter().map(|c| c.subject).collect::<Vec<_>>();
+        assert_eq!(names("SECOND"), ["second"]);
+        assert_eq!(names("author:tester").len(), 3);
+        assert!(names("author:nobody").is_empty());
+        assert_eq!(names("file:a.txt"), ["third", "first"]);
+        assert_eq!(names("third file:a.txt"), ["third"]);
+        assert_eq!(names("until:2000-01-01").len(), 0);
         let _ = std::fs::remove_dir_all(d);
     }
 

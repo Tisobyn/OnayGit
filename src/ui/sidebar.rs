@@ -258,7 +258,7 @@ impl App {
                                     depth = dirs.len();
                                 }
                                 let sel = self.selected_file.as_deref() == Some(f.path.as_str());
-                                let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 32.0), Sense::click());
+                                let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), if self.settings.compact { 24.0 } else { 32.0 }), Sense::click());
                                 if sel || resp.hovered() {
                                     ui.painter().rect_filled(rect.shrink2(egui::vec2(6.0, 1.0)), 6.0, if sel { p.hover } else { p.hover.gamma_multiply(0.5) });
                                 }

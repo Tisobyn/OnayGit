@@ -11,6 +11,7 @@ pub mod refs;
 pub mod tabs;
 pub mod tasks;
 mod repos;
+mod watch;
 pub mod spaces;
 pub mod editors;
 mod staging;
@@ -276,6 +277,26 @@ pub struct App {
     pub last_commit: Option<(String, String)>,
     pub remote_branches: Vec<String>,
     pub branch_filter: String,
+    /// Why the last New Branch did not work.
+    pub branch_err: String,
+    /// Frames to wait before loading a repository, so a "Loading" overlay shows first.
+    pub load_wait: u8,
+    /// Folders sent by later launches of `onaygit`.
+    pub open_rx: Receiver<String>,
+    /// Watches the open repository for file changes.
+    pub watch: Option<watch::RepoWatch>,
+    /// History search: the query that was run, its results, and the channel from the worker.
+    pub search_active: String,
+    pub search_results: Vec<git::Commit>,
+    pub searching: bool,
+    pub search_tx: Sender<(String, Vec<git::Commit>)>,
+    pub search_rx: Receiver<(String, Vec<git::Commit>)>,
+    /// Conflict editor: the open file, its raw text, parts, choices and typed text.
+    pub conflict_path: String,
+    pub conflict_text: String,
+    pub conflict_segs: Vec<git::Seg>,
+    pub conflict_picks: Vec<git::Pick>,
+    pub conflict_edits: Vec<String>,
     pub tb_menu: Option<crate::ui::toolbar_menu::TbMenu>,
     pub repo_filter: String,
     pub branch_tab: u8,
@@ -324,6 +345,9 @@ impl App {
 
         let (tx, rx) = channel();
         let (snap_tx, snap_rx) = channel();
+        let (open_tx, open_rx) = channel();
+        crate::instance::listen(open_tx, cc.egui_ctx.clone());
+        let (search_tx, search_rx) = channel();
         let repos = load_repos();
         let mut app = App {
             settings,
@@ -486,6 +510,20 @@ impl App {
             last_commit: None,
             remote_branches: vec![],
             branch_filter: String::new(),
+            branch_err: String::new(),
+            load_wait: 0,
+            open_rx,
+            watch: None,
+            search_active: String::new(),
+            search_results: vec![],
+            searching: false,
+            search_tx,
+            search_rx,
+            conflict_path: String::new(),
+            conflict_text: String::new(),
+            conflict_segs: vec![],
+            conflict_picks: vec![],
+            conflict_edits: vec![],
             tb_menu: None,
             repo_filter: String::new(),
             branch_tab: 0,
@@ -703,15 +741,60 @@ impl eframe::App for App {
         if self.repo().is_some_and(|r| git::is_remote(&r)) {
             every = every.max(Duration::from_secs(20));
         }
+        // With a file watcher the timer is only a safety net.
+        self.sync_watcher(ctx);
+        if self.watch.is_some() {
+            every = every.max(Duration::from_secs(30));
+        }
+        if self.load_wait > 0 {
+            self.load_wait -= 1;
+            if self.load_wait == 0 {
+                self.refresh();
+            }
+            ctx.request_repaint();
+        }
+        while let Ok(folder) = self.open_rx.try_recv() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            let dir = PathBuf::from(&folder);
+            if folder.is_empty() || !dir.is_dir() {
+                continue;
+            }
+            let top = git::run(&dir, &["rev-parse", "--show-toplevel"]).map(|s| PathBuf::from(s.trim()));
+            match top {
+                Ok(root) => self.open_repo(root),
+                Err(_) => self.status_msg = format!("{folder} is not a git repository"),
+            }
+        }
+        while let Ok((q, found)) = self.search_rx.try_recv() {
+            self.searching = false;
+            // Ignore answers to an older question.
+            if q == self.search_active {
+                self.search_results = found;
+            }
+        }
         while let Ok(snap) = self.snap_rx.try_recv() {
             self.polling = false;
             self.apply_snap(snap);
         }
-        if self.screen == Screen::Repo && self.last_refresh.elapsed() > every && self.busy.is_none() && !self.polling {
+        let due = self.watch_due(ctx);
+        if self.screen == Screen::Repo && (due || self.last_refresh.elapsed() > every) && self.busy.is_none() && !self.polling {
             self.poll_repo(ctx);
         }
         ctx.request_repaint_after(every);
 
+        if self.load_wait > 0 {
+            let p = self.pal();
+            let screen = ctx.screen_rect();
+            ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("load_scrim")))
+                .rect_filled(screen, 0.0, p.bg.gamma_multiply(0.75));
+            egui::Area::new(egui::Id::new("load_card")).order(egui::Order::Tooltip).fixed_pos(screen.center() - egui::vec2(90.0, 20.0)).show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.add(egui::Spinner::new().size(18.0));
+                    ui.label(RichText::new("Loading repository...").size(14.0).color(p.text));
+                });
+            });
+        }
         self.onboarding_window(ctx);
         self.confirm_window(ctx);
         if let (Some(other), Some(repo)) = (self.rebase_onto.take(), self.repo()) {
